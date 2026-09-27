@@ -124,3 +124,10 @@ Do not use this version as the sole permanent record of guild organization.
 Forever is beta software. Ask another guild member to install it and test
 creation, application, invitation and online roster together before rolling
 it out to your guild. Report any Lua error or missing sync.
+
+VERSION AND RANK CHECK (0.4.4)
+The installed version appears at the bottom-right of EXIN Teams and Calendar.
+Click Rank check at the bottom-left of EXIN Teams or type /exin rankcheck to
+see the guild rank reported by the game, the roster rank, and admin status.
+If the version is older than 0.4.4, replace the ForeverTeams folder with the
+new release. GitHub's default main branch is still an older version.

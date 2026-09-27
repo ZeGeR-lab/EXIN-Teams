@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.4 — 2026-09-27
+
+- Display the installed addon version in the bottom-right corner of the team and calendar windows.
+- Add a Rank check button at the bottom-left of the team window, showing the game rank, roster rank, and admin status in a popup. `/exin rankcheck` opens the same popup.
+- Clarify that GitHub's default `main` branch still contains version 0.2.0; install the current versioned ZIP or the draft PR branch to use newer features.
+
 ## 0.4.3 — 2026-09-27
 
 - Fixed guild master administration when the guild roster has not finished loading. The logged-in character's game-provided guild rank now supplies permissions immediately.

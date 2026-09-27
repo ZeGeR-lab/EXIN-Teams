@@ -1,6 +1,8 @@
 local ADDON, FT = ...
 _G.ForeverTeams = FT
 FT.version = 1
+local addonMetadata=C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
+FT.versionString=(addonMetadata and addonMetadata(ADDON,"Version")) or "0.4.4"
 FT.teams = {}
 FT.roster = {}
 FT.invitations = {}
