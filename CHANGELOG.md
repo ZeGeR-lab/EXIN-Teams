@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.3.0 — 2026-09-27
+
+### Added
+
+- Guild officer and guild leader checks for team creation; officers may delete their own teams, and the guild leader may delete any team.
+- Optional owner participation in the active team roster, separate from managing that team.
+- Direct Add button for guild roster members without the addon.
+- Read public guild notes in `Team - DiscordName` form as the primary team assignment. Added a Black team color.
+- Recruitment editor with Save and manually triggered Post to Trade buttons and a one-minute cooldown.
+- Saved deletion records so old team advertisements do not recreate a deleted team.
+
+### Privacy
+
+- Restricted roster hover details and attunement reports to team members and guild officers.
+- Send personal roles, application preferences, professions, and attunement reports in targeted addon whispers instead of guild broadcasts.
+- Remove cached personal reports when a viewer no longer belongs to an authorized team.
+
+### Notes
+
+- The current officer check uses guild rank ID 0 for the guild leader and rank ID 1 for officers; guilds with more officer ranks need configuration.
+- Notes map one primary team. Additional team memberships remain addon data.
+- Automatic yes/no whisper invitations for people without the addon are still pending; managers can add them directly.
+- Multi-client deletion, permissions, privacy, guild-note changes, and Trade posting still need in-game validation.
+
 ## 0.2.0 — 2026-09-26
 
 ### Added
