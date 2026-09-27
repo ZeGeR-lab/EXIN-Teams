@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1 — 2026-09-27
+
+- Fixed calendar dialogs drawing behind date buttons and other calendar controls. Opening the event editor, attendance list, or raid planner now shows one panel above the calendar.
+- Reopening the calendar clears dialogs left open from the previous session.
+
 ## 0.4.0 — 2026-09-27
 
 ### Calendar

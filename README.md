@@ -2,7 +2,7 @@
 
 A guild team manager addon for **Ex Inferno** on WoW Forever. Guild members can belong to multiple teams, apply or accept invitations, choose dungeon roles, review raid attunement readiness, and track Forever dungeon quests.
 
-Version 0.4.0 adds an addon calendar for personal, team, and guild events, attendance responses, private personal invitations, and a 20/40-player raid planner. Click Calendar in the top bar. The planner's live party invites and subgroup placement depend on Forever's in-game API and raid permissions; they still need an in-game test.
+Version 0.4.1 fixes calendar dialogs drawing behind date buttons. Version 0.4.0 adds an addon calendar for personal, team, and guild events, attendance responses, private personal invitations, and a 20/40-player raid planner. Click Calendar in the top bar. The planner's live party invites and subgroup placement depend on Forever's in-game API and raid permissions; they still need an in-game test.
 
 ## Install
 

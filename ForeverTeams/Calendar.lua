@@ -27,9 +27,21 @@ local function wrap(parent,w,h)
   return f
 end
 local calendar=wrap(UIParent,790,620)
-local editor=wrap(UIParent,480,245)
-local planner=wrap(UIParent,580,610)
-local attendancePanel=wrap(UIParent,490,520)
+local editor=wrap(calendar,480,245)
+local planner=wrap(calendar,580,610)
+local attendancePanel=wrap(calendar,490,520)
+-- Calendar buttons are created after these panels. Give dialogs an explicit
+-- higher level so newly created day buttons never draw through a dialog.
+for _,panel in ipairs({editor,planner,attendancePanel}) do
+  panel:SetFrameLevel(calendar:GetFrameLevel()+100)
+end
+local function showPanel(panel)
+  for _,other in ipairs({editor,planner,attendancePanel}) do
+    if other~=panel then other:Hide() end
+  end
+  panel:Show()
+  panel:Raise()
+end
 local today=date("*t")
 local year,month=today.year,today.month
 local day=string.format("%04d-%02d-%02d",year,month,today.day)
@@ -256,7 +268,7 @@ local function openEditor(kind)
   editorTitle:SetText("|cff9bdd00NEW "..kind:upper().." EVENT|r")
   titleBox:SetText(""); timeBox:SetText("19:00"); noteBox:SetText("")
   noteBox:SetShown(kind=="personal")
-  editor:Show()
+  showPanel(editor)
 end
 button(calendar,"+ Personal event",20,-545,140,function() openEditor("personal") end)
 button(calendar,"+ Team event",165,-545,130,function() openEditor("team") end)
@@ -291,7 +303,7 @@ end)
 button(attendancePanel,"Next",340,-458,55,function() attendancePage=attendancePage+1; drawAttendance() end)
 button(attendancePanel,"Close",400,-458,65,function() attendancePanel:Hide() end)
 attendanceButton=button(calendar,"Attendance",685,-500,90,function()
-  if selected then attendancePage=1; attendancePanel:Show(); drawAttendance() end
+  if selected then attendancePage=1; showPanel(attendancePanel); drawAttendance() end
 end)
 button(editor,"Create",260,-185,90,function()
   local title=titleBox:GetText():match("^%s*(.-)%s*$")
@@ -358,7 +370,7 @@ function FT:ShowRaidPlanner(group,event)
   if not group or not event or not event.raidSize or not self:CanSeeDetails(group,self:SelfName()) then return end
   planTeam,planEvent,planPage=group,event,1
   slot=nil; assignBox:SetText("")
-  planner:Show(); drawPlan()
+  showPanel(planner); drawPlan()
 end
 button(planner,"Other groups",25,-449,118,function()
   if planEvent and planEvent.raidSize==40 then planPage=planPage==1 and 2 or 1; drawPlan() end
@@ -454,6 +466,7 @@ function FT:ShowCalendar()
   day=string.format("%04d-%02d-%02d",year,month,now.day)
   teamID=self.selected
   selected=nil; eventPage=1
+  editor:Hide(); planner:Hide(); attendancePanel:Hide()
   calendar:Show(); render()
 end
 local oldRefresh=FT.Refresh
