@@ -130,4 +130,4 @@ The installed version appears at the bottom-right of EXIN Teams and Calendar.
 Click Rank check at the bottom-left of EXIN Teams or type /exin rankcheck to
 see the guild rank reported by the game, the roster rank, and admin status.
 If the version is older than 0.4.4, replace the ForeverTeams folder with the
-new release. GitHub's default main branch is still an older version.
+new release.

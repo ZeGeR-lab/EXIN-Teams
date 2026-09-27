@@ -4,7 +4,7 @@
 
 - Display the installed addon version in the bottom-right corner of the team and calendar windows.
 - Add a Rank check button at the bottom-left of the team window, showing the game rank, roster rank, and admin status in a popup. `/exin rankcheck` opens the same popup.
-- Clarify that GitHub's default `main` branch still contains version 0.2.0; install the current versioned ZIP or the draft PR branch to use newer features.
+- Document how to check the installed version and verify the guild rank shown by the game.
 
 ## 0.4.3 — 2026-09-27
 
