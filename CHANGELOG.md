@@ -1,6 +1,25 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 — 2026-09-27
+
+### Calendar
+
+- Added a visual month calendar with day buttons and separate Personal, Team, and Guild views. Event creation now has separate title and time fields instead of a typed date format.
+- Personal events can have a private note and targeted invitations to guild members running EXIN Teams. Invitees choose Going or Declined. Personal invitations and responses are retried when their users reconnect.
+- Team members can RSVP Yes or No; confirmed team events appear automatically on their personal view. Guild officers can create guild-wide events and members can RSVP to them.
+- Added attendance lists for each event and deletion controls for personal owners, team managers, and guild officers as appropriate.
+
+### Raid planning
+
+- Team event managers can choose a 20-player or 40-player raid plan and assign confirmed attendees to four or eight groups of five.
+- Added button-triggered attempts to invite confirmed online players (officers first), convert a party to a raid, and place members into planned raid subgroups when supported by the game and the player has group permissions. Live invite and subgroup behavior need an in-game check.
+
+### Limits
+
+- Personal invites are exchanged between addon users; someone without EXIN Teams cannot see or reply to the invitation in the addon.
+- Personal and team events are saved locally and synchronized among online addon users. The calendar is an addon interface; it does not add events to Blizzard's built-in calendar.
+
+### Other updates in 0.4.0
 
 - Fixed the sidebar's extra empty team buttons and automatically open the first team in Your Teams when no team is selected.
 - Send private addon updates only to guild roster members currently online and target their full canonical character names. A single connection check reports when no other guild member running EXIN Teams answers; refresh reruns the check.

@@ -72,9 +72,13 @@ local function selectPage(name)
   end
   FT:Refresh()
 end
-pageButtons.teams = button(panel, "Teams", 255, -12, 80, function() selectPage("teams") end)
-pageButtons.attunements = button(panel, "Attunements", 340, -12, 105, function() selectPage("attunements") end)
-pageButtons.quests = button(panel, "Dungeon quests", 450, -12, 140, function() selectPage("quests") end)
+pageButtons.teams = button(panel, "Teams", 215, -12, 70, function() selectPage("teams") end)
+local calendarTab=button(panel,"Calendar",290,-12,85,function()
+  if FT.ShowCalendar then FT:ShowCalendar() end
+end)
+pageButtons.attunements = button(panel, "Attunements", 380, -12, 100, function() selectPage("attunements") end)
+pageButtons.quests = button(panel, "Dungeon quests", 485, -12, 105, function() selectPage("quests") end)
+calendarTab:SetFrameLevel(panel:GetFrameLevel()+10)
 for _, tab in pairs(pageButtons) do tab:SetFrameLevel(panel:GetFrameLevel()+10) end
 pageButtons.teams:LockHighlight()
 attunementPage:Hide()
@@ -456,18 +460,8 @@ control("Edit message",305,-442,105,function()
     ask("Team message of the day",team.motd,function(s) FT:Act("MOTD",team.id,s) end)
   end
 end)
-control("Add event",415,-442,90,function()
-  local team=chosen(); if team and FT:CanManage(team,me()) then
-    ask("YYYY-MM-DD HH:MM ; Event title (server time)","",function(s)
-      local when,title=s:match("^%s*(%d%d%d%d%-%d%d%-%d%d %d%d:%d%d)%s*;%s*(.-)%s*$")
-      if not when or not title or #title < 2 or #title > 70 then
-        FT:Notice("Use YYYY-MM-DD HH:MM ; Event title.")
-        return
-      end
-      local eventID=me().."-"..tostring(time()).."-"..tostring(math.floor(GetTime()*1000)%100000)
-      FT:Act("EVENT",team.id,eventID,when,title)
-    end)
-  end
+control("Calendar",415,-442,90,function()
+  if FT.ShowCalendar then FT:ShowCalendar() end
 end)
 control("Team color",510,-442,100,function()
   local team=chosen(); if not team or not FT:CanManage(team,me()) then return end

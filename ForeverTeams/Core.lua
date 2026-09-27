@@ -6,6 +6,9 @@ FT.roster = {}
 FT.invitations = {}
 FT.requests = {}
 FT.events = {}
+FT.personalEvents = {}
+FT.guildEvents = {}
+FT.guildDeleted = {}
 FT.profiles = {}
 FT.professions = {}
 FT.playerInfo = {}
@@ -251,13 +254,87 @@ end
 local function eventByID(team, eventID)
   for _, event in ipairs(team.events) do if event.id == eventID then return event end end
 end
+local function guildEventByID(eventID)
+  for _, event in ipairs(FT.guildEvents) do if event.id==eventID then return event end end
+end
 local function validWhen(s)
   if type(s) ~= "string" then return false end
   local year, month, day, hour, minute = s:match("^(%d%d%d%d)%-(%d%d)%-(%d%d) (%d%d):(%d%d)$")
   return year and tonumber(month) >= 1 and tonumber(month) <= 12 and
     tonumber(day) >= 1 and tonumber(day) <= 31 and tonumber(hour) <= 23 and tonumber(minute) <= 59
 end
+local function personalID() return selfName().."-"..tostring(time()).."-"..tostring(math.floor(GetTime()*1000)%100000) end
+function FT:NewPersonalEvent(when, title, note)
+  note=note or ""
+  if not validWhen(when) or not valid(title,70) or #note>60 or note:find("[|\r\n]") then return end
+  local id=personalID()
+  self.personalEvents[id]={id=id,when=when,title=title,note=note,owner=selfName(),invited={},attendees={[selfName()]=true},declined={}}
+  save()
+  self:Refresh()
+  return id
+end
+function FT:InvitePersonal(id, who)
+  local event=self.personalEvents[id]
+  who=norm(who)
+  if not event or event.owner~=selfName() or not self.roster[who] or who==selfName() then return false end
+  event.invited[who]=true
+  save()
+  if self.roster[who].online then
+    emit("WHISPER",who,"PERSONAL",id,event.when,event.title,event.note or "")
+  end
+  self:Refresh()
+  return true
+end
+function FT:RSVPPersonal(id, yes)
+  local event=self.personalEvents[id]
+  if not event or not event.invited or not event.invited[selfName()] or event.owner==selfName() then return end
+  event.attendees=event.attendees or {}
+  event.declined=event.declined or {}
+  event.attendees[selfName()]=yes and true or nil
+  event.declined[selfName()]=yes and nil or true
+  local owner=self.roster[event.owner]
+  if owner and owner.online then emit("WHISPER",event.owner,"PERSONAL_RSVP",id,yes and "yes" or "no") end
+  save()
+  self:Refresh()
+end
+function FT:RemovePersonal(id)
+  local event=self.personalEvents[id]
+  if not event or event.owner~=selfName() then return end
+  for who in pairs(event.invited or {}) do
+    if self.roster[who] and self.roster[who].online then emit("WHISPER",who,"PERSONAL_CANCEL",id) end
+  end
+  self.personalEvents[id]=nil
+  save()
+  self:Refresh()
+end
 local function apply(op, f, actor)
+  if op=="GUILD_EVENT" then
+    if not FT:IsGuildOfficer(actor) or not valid(f[2],80) or f[2]:sub(1,#actor+1)~=actor.."-" or
+      not validWhen(f[3]) or not valid(f[4],70) or guildEventByID(f[2]) or FT.guildDeleted[f[2]] or #FT.guildEvents>=100 then return end
+    table.insert(FT.guildEvents,{id=f[2],when=f[3],title=f[4],owner=actor,attendees={},declined={}})
+    save(); FT:Refresh(); return
+  elseif op=="GUILD_RSVP" then
+    local event=guildEventByID(f[2])
+    if not event or (f[3]~="yes" and f[3]~="no") then return end
+    event.attendees=event.attendees or {}; event.declined=event.declined or {}
+    event.attendees[actor]=f[3]=="yes" and true or nil
+    event.declined[actor]=f[3]=="no" and true or nil
+    save(); FT:Refresh(); return
+  elseif op=="GUILD_ATTEND" then
+    local event=guildEventByID(f[2])
+    if not event or event.owner~=actor or not FT.roster[norm(f[3])] or
+      (f[4]~="yes" and f[4]~="no") then return end
+    event.attendees[norm(f[3])]=f[4]=="yes" and true or nil
+    event.declined[norm(f[3])]=f[4]=="no" and true or nil
+    save(); FT:Refresh(); return
+  elseif op=="GUILD_DEL" then
+    if not valid(f[2],80) or not FT:IsGuildOfficer(actor) then return end
+    for i, current in ipairs(FT.guildEvents) do
+      if current.id==f[2] then table.remove(FT.guildEvents,i); break end
+    end
+    FT.guildDeleted[f[2]]=true
+    save(); FT:Refresh(); return
+  end
   if op == "ATTUNE" then
     local version = tonumber(f[3])
     local count = FT.attunementData and #FT.attunementData or 0
@@ -367,15 +444,30 @@ local function apply(op, f, actor)
     team.color = f[3]
     save()
   elseif op == "EVENT" and FT:CanManage(team, actor) and valid(f[3], 48) and validWhen(f[4]) and
-    valid(f[5], 70) and not eventByID(team, f[3]) and #team.events < 20 then
+    valid(f[5], 70) and not eventByID(team, f[3]) and not (team.deletedEvents and team.deletedEvents[f[3]]) and #team.events < 100 then
     table.insert(team.events, {id = f[3], when = f[4], title = f[5], by = actor, attendees = {}})
     FT:RecordActivity(team,display(actor).." added event: "..f[5])
+    save()
+  elseif op == "EVENT_DEL" and FT:CanManage(team,actor) and valid(f[3],48) then
+    local event=eventByID(team,f[3])
+    if event then
+      FT:RecordActivity(team,display(actor).." removed event: "..event.title)
+      for i, current in ipairs(team.events) do
+        if current.id==f[3] then table.remove(team.events,i); break end
+      end
+    end
+    team.deletedEvents=team.deletedEvents or {}
+    team.deletedEvents[f[3]]=true
     save()
   elseif op == "RSVP" and team.members[actor] and (f[4] == "yes" or f[4] == "no") then
     local event = eventByID(team, f[3])
     if event then
       event.attendees = event.attendees or {}
+      event.declined = event.declined or {}
+      local changed=(f[4]=="yes" and not event.attendees[actor]) or (f[4]=="no" and not event.declined[actor])
       event.attendees[actor] = f[4] == "yes" and true or nil
+      event.declined[actor] = f[4] == "no" and true or nil
+      if changed then FT:RecordActivity(team,display(actor)..(f[4]=="yes" and " confirmed for " or " declined ")..event.title) end
       save()
     end
   elseif op == "ATTEND" and actor == team.owner and team.members[norm(f[4])] and
@@ -383,7 +475,30 @@ local function apply(op, f, actor)
     local event = eventByID(team, f[3])
     if event then
       event.attendees = event.attendees or {}
+      event.declined = event.declined or {}
       event.attendees[norm(f[4])] = f[5] == "yes" and true or nil
+      event.declined[norm(f[4])] = f[5] == "no" and true or nil
+      save()
+    end
+  elseif op == "RAID_SIZE" and FT:CanManage(team,actor) and (f[4]=="20" or f[4]=="40") then
+    local event=eventByID(team,f[3])
+    if event then
+      event.raidSize=tonumber(f[4])
+      event.slots=event.slots or {}
+      for slot in pairs(event.slots) do if slot>event.raidSize then event.slots[slot]=nil end end
+      save()
+    end
+  elseif op == "RAID_SLOT" and FT:CanManage(team,actor) then
+    local event=eventByID(team,f[3])
+    local slot=tonumber(f[4])
+    local who=norm(f[5])
+    if event and event.raidSize and slot and slot==math.floor(slot) and slot>=1 and slot<=event.raidSize and
+      (f[5]=="clear" or event.attendees and event.attendees[who] and team.members[who]) then
+      event.slots=event.slots or {}
+      if f[5]~="clear" then
+        for index, assigned in pairs(event.slots) do if assigned==who then event.slots[index]=nil end end
+        event.slots[slot]=who
+      else event.slots[slot]=nil end
       save()
     end
   elseif op == "SYNC" and actor == team.owner and FT:CanManage(team, actor) then
@@ -428,6 +543,25 @@ local function syncTeams()
   if info then sendPrivate("PREF", selfName(), info.availability, info.interest) end
   local delay = 0
   local pendingPackets = {}
+  for _, event in ipairs(FT.guildEvents) do
+    if event.owner==selfName() then
+      table.insert(pendingPackets,{"GUILD_EVENT",event.id,event.when,event.title})
+      for who in pairs(event.attendees or {}) do
+        table.insert(pendingPackets,{"GUILD_ATTEND",event.id,who,"yes"})
+      end
+      for who in pairs(event.declined or {}) do
+        table.insert(pendingPackets,{"GUILD_ATTEND",event.id,who,"no"})
+      end
+    end
+    if event.attendees and event.attendees[selfName()] then
+      table.insert(pendingPackets,{"GUILD_RSVP",event.id,"yes"})
+    elseif event.declined and event.declined[selfName()] then
+      table.insert(pendingPackets,{"GUILD_RSVP",event.id,"no"})
+    end
+  end
+  if FT:IsGuildOfficer(selfName()) then
+    for id in pairs(FT.guildDeleted) do table.insert(pendingPackets,{"GUILD_DEL",id}) end
+  end
   for id, team in pairs(FT.teams) do
     if team.owner == selfName() then
       local packets = {{"NEW", id, team.name, team.focus, team.motd, team.owner, FT:Color(team.color).name},
@@ -441,17 +575,53 @@ local function syncTeams()
           for who in pairs(event.attendees or {}) do
             table.insert(packets, {"ATTEND", id, event.id, who, "yes"})
           end
+          for who in pairs(event.declined or {}) do
+            table.insert(packets, {"ATTEND", id, event.id, who, "no"})
+          end
+          if event.raidSize then
+            table.insert(packets,{"RAID_SIZE",id,event.id,tostring(event.raidSize)})
+            for slot, who in pairs(event.slots or {}) do
+              table.insert(packets,{"RAID_SLOT",id,event.id,tostring(slot),who})
+            end
+          end
         end
+      end
+      for eventID in pairs(team.deletedEvents or {}) do
+        table.insert(packets,{"EVENT_DEL",id,eventID})
       end
       for _, packet in ipairs(packets) do table.insert(pendingPackets, packet) end
     end
     if FT.requests[id] and FT.requests[id][selfName()] and not team.members[selfName()] then
       table.insert(pendingPackets, {"APPLY", id, selfName()})
     end
+    if team.members[selfName()] then
+      for _, event in ipairs(team.events) do
+        if event.attendees and event.attendees[selfName()] then
+          table.insert(pendingPackets,{"RSVP",id,event.id,"yes"})
+        elseif event.declined and event.declined[selfName()] then
+          table.insert(pendingPackets,{"RSVP",id,event.id,"no"})
+        end
+      end
+    end
     if FT:CanManage(team, selfName()) and FT.invitations[id] then
       for who in pairs(FT.invitations[id]) do
         if not team.members[who] then table.insert(pendingPackets, {"INVITE", id, who}) end
       end
+    end
+  end
+  for _, event in pairs(FT.personalEvents) do
+    if event.owner == selfName() then
+      for who in pairs(event.invited or {}) do
+        if FT.roster[who] and FT.roster[who].online then
+          local payload={"PERSONAL",event.id,event.when,event.title,event.note or ""}
+          delay=delay+0.35
+          C_Timer.After(delay,function() emit("WHISPER",who,unpack(payload)) end)
+        end
+      end
+    elseif FT.roster[event.owner] and FT.roster[event.owner].online then
+      local status=event.attendees and event.attendees[selfName()] and "yes" or
+        event.declined and event.declined[selfName()] and "no"
+      if status then emit("WHISPER",event.owner,"PERSONAL_RSVP",event.id,status) end
     end
   end
   for id, record in pairs(FT.deleted) do
@@ -485,6 +655,12 @@ function FT:OpenGuild()
   ForeverTeamsDB = ForeverTeamsDB or {}
   ForeverTeamsDB[guild] = ForeverTeamsDB[guild] or {teams = {}}
   self.db = ForeverTeamsDB[guild]
+  self.db.personalEvents=self.db.personalEvents or {}
+  self.personalEvents=self.db.personalEvents
+  self.db.guildEvents=self.db.guildEvents or {}
+  self.guildEvents=self.db.guildEvents
+  self.db.guildDeleted=self.db.guildDeleted or {}
+  self.guildDeleted=self.db.guildDeleted
   self.teams = self.db.teams
   self.db.profiles = self.db.profiles or {}
   self.profiles = self.db.profiles
@@ -662,6 +838,34 @@ frame:SetScript("OnEvent", function(_, event, ...)
     if FT.peers then FT.peers[actor]=true end
     local fields = {}
     for part in (message .. "|"):gmatch("(.-)|") do table.insert(fields, part) end
+    if fields[1] == "PERSONAL" then
+      if channel~="WHISPER" or not valid(fields[2],80) or fields[2]:sub(1,#actor+1)~=actor.."-" or
+        not validWhen(fields[3]) or not valid(fields[4],70) or
+        (fields[5] and (#fields[5]>60 or fields[5]:find("[\r\n]"))) then return end
+      local entry=FT.personalEvents[fields[2]]
+      if not entry then
+        entry={id=fields[2],owner=actor,invited={[selfName()]=true},attendees={[actor]=true},declined={}}
+        FT.personalEvents[fields[2]]=entry
+      end
+      if entry.owner~=actor then return end
+      entry.when,entry.title,entry.note=fields[3],fields[4],fields[5] or ""
+      local status=entry.attendees and entry.attendees[selfName()] and "yes" or
+        entry.declined and entry.declined[selfName()] and "no"
+      if status then emit("WHISPER",actor,"PERSONAL_RSVP",entry.id,status) end
+      save(); FT:Refresh(); return
+    elseif fields[1] == "PERSONAL_RSVP" then
+      local entry=FT.personalEvents[fields[2]]
+      if channel~="WHISPER" or not entry or entry.owner~=selfName() or not entry.invited[actor] or
+        (fields[3]~="yes" and fields[3]~="no") then return end
+      entry.attendees[actor]=fields[3]=="yes" and true or nil
+      entry.declined[actor]=fields[3]=="no" and true or nil
+      save(); FT:Refresh(); return
+    elseif fields[1] == "PERSONAL_CANCEL" then
+      local entry=FT.personalEvents[fields[2]]
+      if channel~="WHISPER" or not entry or entry.owner~=actor then return end
+      FT.personalEvents[fields[2]]=nil
+      save(); FT:Refresh(); return
+    end
     if (fields[1] == "PROF" or fields[1] == "PREF" or fields[1] == "PROFILE" or fields[1] == "ATTUNE") then
       if channel ~= "WHISPER" then return end
       local allowed=FT:IsGuildOfficer(selfName())

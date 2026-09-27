@@ -1,5 +1,24 @@
 EXIN Teams — Ex Inferno guild prototype for WoW Forever
 
+CALENDAR (0.4.0)
+Click Calendar at the top to browse days in a month. Choose Personal, Team,
+or Guild. Select a date and click + Personal event, + Team event, or (for guild
+officers) + Guild event. Enter a title, an HH:MM time, and optionally a private
+personal note. Times use your client's local calendar time. Team events require
+management rights for the team selected on the Teams tab.
+Select an event to RSVP Yes or No and inspect Attendance. A Yes RSVP to a team
+or guild event adds that event to your Personal calendar automatically. Personal
+event owners can type a guild character's full name to invite them privately;
+the invitee needs EXIN Teams for the invite and response to synchronize. No
+personal event is published to the team calendar. Managers may delete team
+events, personal event owners may delete their own, and guild officers may
+delete guild events.
+Choose Raid 20 or Raid 40 on a team event to open its raid planner. Assign
+confirmed attendees to four or eight groups of five. Invite confirmed attempts
+invitations to online assigned players, officers first, when you press it. Convert to raid and
+Arrange groups act on your live party or raid if your client and permissions
+allow it. These game API actions still require in-game validation.
+
 INSTALL
 Replace the ForeverTeams folder in your Forever Interface/AddOns folder.
 The AddOns screen now lists it as EXIN Teams. Type /exin or /teams in game.
