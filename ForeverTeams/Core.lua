@@ -10,12 +10,14 @@ FT.profiles = {}
 FT.professions = {}
 FT.playerInfo = {}
 FT.attunements = {}
+FT.deleted = {}
 FT.selected = nil
 FT.colors = {
   {name="Pink", hex="ff83b7"}, {name="Purple", hex="aa89ff"},
   {name="Blue", hex="69b6ff"}, {name="Green", hex="78d996"},
   {name="Yellow", hex="f7d96b"}, {name="Orange", hex="ffab69"},
   {name="Red", hex="ff7777"}, {name="White", hex="eeeeee"},
+  {name="Black", hex="838b92"},
 }
 function FT:Color(name)
   for _, color in ipairs(self.colors) do if color.name == name then return color end end
@@ -37,38 +39,115 @@ local function rosterRefresh()
   wipe(FT.roster)
   local total = GetNumGuildMembers and GetNumGuildMembers() or 0
   for i = 1, total do
-    local name, rank, rankID, level, class, _, _, _, online = GetGuildRosterInfo(i)
-    if name then FT.roster[norm(name)] = { name = name, rank = rank, rankID = rankID, level = level, class = class, online = online } end
+    local name, rank, rankID, level, class, _, note, _, online = GetGuildRosterInfo(i)
+    if name then FT.roster[norm(name)] = { name = name, rank = rank, rankID = rankID, level = level, class = class, online = online, note = note or "" } end
+  end
+  if FT.db then
+    for _, team in pairs(FT.teams) do
+      team.noteMembers = team.noteMembers or {}
+      for who in pairs(team.noteMembers) do
+        local entry=FT.roster[who]
+        local label=entry and entry.note:match("^%s*(.-)%s+%-%s+.+$")
+        if not label or (label:lower() ~= team.name:lower() and label:lower() ~= (team.color or ""):lower()) then
+          if team.members[who] == "member" then team.members[who]=nil end
+          team.noteMembers[who]=nil
+        end
+      end
+      for who, entry in pairs(FT.roster) do
+        local label=entry.note:match("^%s*(.-)%s+%-%s+.+$")
+        if label and (label:lower() == team.name:lower() or label:lower() == (team.color or ""):lower()) and
+          (who ~= team.owner or team.ownerParticipates) and not team.members[who] then
+          team.members[who]="member"
+          team.noteMembers[who]=true
+        end
+      end
+    end
   end
   FT:Refresh()
 end
 function FT:Refresh() if self.Draw then self:Draw() end end
 function FT:Notice(s) print("|cff9bdd00EXIN Teams:|r " .. s) end
 function FT:Member(team, who) return team and team.members[norm(who)] end
+function FT:IsGuildOfficer(who)
+  local member=self.roster[norm(who)]
+  return member and type(member.rankID)=="number" and member.rankID <= 1
+end
+function FT:IsGuildLeader(who)
+  local member=self.roster[norm(who)]
+  return member and member.rankID == 0
+end
+function FT:CanCreate(who) return self:IsGuildOfficer(who) end
+function FT:CanDelete(team, who)
+  return team and self:IsGuildOfficer(who) and (team.owner == norm(who) or self:IsGuildLeader(who))
+end
+function FT:CanSeeDetails(team, who)
+  return team and (team.members[norm(who)] or team.owner == norm(who) or self:IsGuildOfficer(who))
+end
 function FT:CanManage(team, who)
   local role = self:Member(team, who)
-  return role == "leader" or role == "officer"
+  return team and (team.owner == norm(who) or role == "officer" or self:IsGuildOfficer(who))
 end
-local function send(op, ...)
+local function emit(channel, target, op, ...)
   if not myGuild() then return end
   local fields = {op, ...}
   for _, field in ipairs(fields) do if type(field) ~= "string" or field:find("[|\r\n]") then return end end
   local msg = table.concat(fields, "|")
   if #msg > 240 then return end
   if C_ChatInfo and C_ChatInfo.SendAddonMessage then
-    C_ChatInfo.SendAddonMessage(PREFIX, msg, "GUILD")
+    C_ChatInfo.SendAddonMessage(PREFIX, msg, channel, target)
   elseif SendAddonMessage then
-    SendAddonMessage(PREFIX, msg, "GUILD")
+    SendAddonMessage(PREFIX, msg, channel, target)
   end
+end
+local function send(op, ...) emit("GUILD", nil, op, ...) end
+local function sendPrivate(op, ...)
+  local destinations={}
+  for who, entry in pairs(FT.roster) do
+    if who ~= selfName() and FT:IsGuildOfficer(who) then destinations[who]=entry.name end
+  end
+  for id, team in pairs(FT.teams) do
+    if team.owner == selfName() or team.members[selfName()] or (FT.requests[id] and FT.requests[id][selfName()]) then
+      for who in pairs(team.members) do
+        local entry=FT.roster[who]
+        if entry and who ~= selfName() then destinations[who]=entry.name end
+      end
+      local entry=FT.roster[team.owner]
+      if entry and team.owner ~= selfName() then destinations[team.owner]=entry.name end
+    end
+  end
+  for _, name in pairs(destinations) do emit("WHISPER", name, op, ...) end
 end
 local function save()
   if FT.db then
+    if not FT:IsGuildOfficer(selfName()) then
+      local function allowed(who)
+        if who == selfName() then return true end
+        for id, team in pairs(FT.teams) do
+          if (team.members[who] or team.owner == who or (FT.requests[id] and FT.requests[id][who])) and
+            FT:CanSeeDetails(team, selfName()) then return true end
+        end
+      end
+      for who in pairs(FT.professions) do if not allowed(who) then FT.professions[who]=nil end end
+      for who in pairs(FT.playerInfo) do if not allowed(who) then FT.playerInfo[who]=nil end end
+      for who in pairs(FT.attunements) do if not allowed(who) then FT.attunements[who]=nil end end
+      for id, requests in pairs(FT.requests) do
+        if not FT:CanManage(FT.teams[id], selfName()) then
+          for who in pairs(requests) do if who ~= selfName() then requests[who]=nil end end
+        end
+      end
+      for id, invites in pairs(FT.invitations) do
+        if not FT:CanManage(FT.teams[id], selfName()) then
+          for who in pairs(invites) do if who ~= selfName() then invites[who]=nil end end
+        end
+      end
+    end
     FT.db.teams = FT.teams
     FT.db.requests = FT.requests
     FT.db.invitations = FT.invitations
     FT.db.professions = FT.professions
     FT.db.playerInfo = FT.playerInfo
     FT.db.attunements = FT.attunements
+    FT.db.deleted = FT.deleted
   end
 end
 local function clearPending(id, who)
@@ -125,10 +204,18 @@ local function apply(op, f, actor)
   local id, team = f[2], FT.teams[f[2]]
   if op == "NEW" then
     if not valid(id, 48) or not valid(f[3], 24) or not valid(f[4], 48) or not valid(f[5], 70) then return end
-    if f[6] ~= actor or team then return end
+    if f[6] ~= actor or team or not FT:CanCreate(actor) or FT.deleted[id] then return end
     FT.teams[id] = { id = id, name = f[3], focus = f[4], motd = f[5], owner = actor,
       color = FT:Color(f[7]).name,
-      members = {[actor] = "leader"}, events = {} }
+      members = {}, ownerParticipates=false, events = {} }
+    save()
+    rosterRefresh()
+  elseif op == "DEL" and team and FT:CanDelete(team, actor) then
+    FT.deleted[id]={owner=team.owner, by=actor}
+    FT.teams[id]=nil
+    FT.requests[id]=nil
+    FT.invitations[id]=nil
+    if FT.selected==id then FT.selected=nil end
     save()
   elseif not team then return
   elseif op == "APPLY" and actor == f[3] and not team.members[actor] and
@@ -148,11 +235,23 @@ local function apply(op, f, actor)
     team.members[norm(f[3])] = "member"
     clearPending(id, norm(f[3]))
     save()
-  elseif op == "REMOVE" and (actor == norm(f[3]) or FT:CanManage(team, actor) and team.owner ~= norm(f[3])) and team.owner ~= norm(f[3]) then
-    team.members[norm(f[3])] = nil
+  elseif op == "ADD" and FT:CanManage(team, actor) and FT.roster[norm(f[3])] and not team.members[norm(f[3])] then
+    team.members[norm(f[3])]="member"
+    if team.noteMembers then team.noteMembers[norm(f[3])]=nil end
     clearPending(id, norm(f[3]))
     save()
-  elseif op == "ROLE" and actor == team.owner and team.members[norm(f[3])] and norm(f[3]) ~= team.owner and (f[4] == "officer" or f[4] == "member") then
+  elseif op == "PART" and actor == team.owner and f[3] == actor then
+    if f[4] == "yes" then team.members[actor]="member"
+    elseif f[4] == "no" then team.members[actor]=nil
+    else return end
+    team.ownerParticipates=f[4] == "yes"
+    save()
+  elseif op == "REMOVE" and (actor == norm(f[3]) or FT:CanManage(team, actor)) and team.owner ~= norm(f[3]) then
+    team.members[norm(f[3])] = nil
+    if team.noteMembers then team.noteMembers[norm(f[3])]=nil end
+    clearPending(id, norm(f[3]))
+    save()
+  elseif op == "ROLE" and (actor == team.owner or FT:IsGuildLeader(actor)) and team.members[norm(f[3])] and norm(f[3]) ~= team.owner and (f[4] == "officer" or f[4] == "member") then
     team.members[norm(f[3])] = f[4]
     save()
   elseif op == "MOTD" and FT:CanManage(team, actor) and valid(f[3], 150) then
@@ -193,7 +292,8 @@ local function apply(op, f, actor)
   elseif op == "ROSTER" and actor == team.owner and valid(f[3], 80) and (f[4] == "member" or f[4] == "officer" or f[4] == "leader") then
     local who = norm(f[3])
     if FT.roster[who] and (f[4] ~= "leader" or who == team.owner) then
-      team.members[who] = f[4]
+      team.members[who] = f[4] == "leader" and "member" or f[4]
+      if who == team.owner then team.ownerParticipates=true end
       clearPending(id, who)
       save()
     end
@@ -204,22 +304,24 @@ function FT:Act(op, ...)
   local fields = {op, ...}
   for _, value in ipairs(fields) do if not valid(value, 150) then self:Notice("That entry is too long or contains an unsupported character."); return end end
   apply(op, fields, selfName())
-  send(op, ...)
+  if op == "PROF" or op == "PREF" or op == "PROFILE" or op == "ATTUNE" then sendPrivate(op, ...)
+  elseif op == "APPLY" then send(op, fields[2], selfName())
+  else send(op, ...) end
 end
 local function syncTeams()
   if not myGuild() then return end
   local readiness = FT.attunements[selfName()]
   if readiness then
-    send("ATTUNE", selfName(), tostring(readiness.version), readiness.states, readiness.faction)
+    sendPrivate("ATTUNE", selfName(), tostring(readiness.version), readiness.states, readiness.faction)
   end
   local own = FT.profiles[selfName()]
-  if own then send("PROFILE", selfName(), own.main, own.off) end
+  if own then sendPrivate("PROFILE", selfName(), own.main, own.off) end
   local trades = FT.professions[selfName()]
   if trades and trades[1] and trades[2] then
-    send("PROF", selfName(), trades[1].name, tostring(trades[1].rank), trades[2].name, tostring(trades[2].rank))
+    sendPrivate("PROF", selfName(), trades[1].name, tostring(trades[1].rank), trades[2].name, tostring(trades[2].rank))
   end
   local info = FT.playerInfo[selfName()]
-  if info then send("PREF", selfName(), info.availability, info.interest) end
+  if info then sendPrivate("PREF", selfName(), info.availability, info.interest) end
   local delay = 0
   local pendingPackets = {}
   for id, team in pairs(FT.teams) do
@@ -240,15 +342,17 @@ local function syncTeams()
       for _, packet in ipairs(packets) do table.insert(pendingPackets, packet) end
     end
     if FT.requests[id] and FT.requests[id][selfName()] and not team.members[selfName()] then
-      local request=FT.requests[id][selfName()]
-      table.insert(pendingPackets, {"APPLY", id, selfName(),
-        type(request)=="table" and request.availability or "Not provided",
-        type(request)=="table" and request.interest or "Both"})
+      table.insert(pendingPackets, {"APPLY", id, selfName()})
     end
     if FT:CanManage(team, selfName()) and FT.invitations[id] then
       for who in pairs(FT.invitations[id]) do
         if not team.members[who] then table.insert(pendingPackets, {"INVITE", id, who}) end
       end
+    end
+  end
+  for id, record in pairs(FT.deleted) do
+    if FT:IsGuildOfficer(selfName()) and (record.owner == selfName() or FT:IsGuildLeader(selfName())) then
+      table.insert(pendingPackets, {"DEL",id})
     end
   end
   for _, packet in ipairs(pendingPackets) do
@@ -272,6 +376,8 @@ function FT:OpenGuild()
   self.playerInfo = self.db.playerInfo
   self.db.attunements = self.db.attunements or {}
   self.attunements = self.db.attunements
+  self.db.deleted = self.db.deleted or {}
+  self.deleted = self.db.deleted
   self.db.requests = self.db.requests or {}
   self.db.invitations = self.db.invitations or {}
   self.requests = self.db.requests
@@ -279,11 +385,16 @@ function FT:OpenGuild()
   for id, team in pairs(self.teams) do
     if type(team) ~= "table" or type(team.members) ~= "table" or type(team.owner) ~= "string" then
       self.teams[id] = nil
-    else team.events = team.events or {}; team.color = self:Color(team.color).name end
+    else
+      team.events = team.events or {}
+      team.color = self:Color(team.color).name
+      if team.ownerParticipates==nil then team.ownerParticipates=team.members[team.owner] and true or false end
+    end
   end
   if C_GuildInfo and C_GuildInfo.GuildRoster then C_GuildInfo.GuildRoster()
   elseif GuildRoster then GuildRoster() end
   rosterRefresh()
+  save()
   if not self.announced then
     for _, team in pairs(self.teams) do
       if team.members[selfName()] then self:Notice(team.name .. ": " .. (team.motd or "")) end
@@ -387,7 +498,7 @@ function FT:UpdateAttunements(force)
   self.attunements[who] = {version=self.progressVersion or 1, states=stateText, faction=faction, updated=time()}
   save()
   if changed or force then
-    send("ATTUNE", who, tostring(self.progressVersion or 1), stateText, faction)
+    sendPrivate("ATTUNE", who, tostring(self.progressVersion or 1), stateText, faction)
   end
   self:Refresh()
 end
@@ -417,7 +528,7 @@ frame:SetScript("OnEvent", function(_, event, ...)
     C_Timer.After(4, function()
       send("HELLO", selfName())
       local own = FT.profiles[selfName()]
-      if own then send("PROFILE", selfName(), own.main, own.off) end
+      if own then sendPrivate("PROFILE", selfName(), own.main, own.off) end
     end)
   elseif event == "SKILL_LINES_CHANGED" then
     C_Timer.After(0.5, function() FT:UpdateProfessions() end)
@@ -427,11 +538,20 @@ frame:SetScript("OnEvent", function(_, event, ...)
   elseif event == "GUILD_ROSTER_UPDATE" then rosterRefresh()
   elseif event == "CHAT_MSG_ADDON" then
     local prefix, message, channel, sender = ...
-    if prefix ~= PREFIX or channel ~= "GUILD" or type(message) ~= "string" or #message > 240 then return end
+    if prefix ~= PREFIX or (channel ~= "GUILD" and channel ~= "WHISPER") or type(message) ~= "string" or #message > 240 then return end
     local actor = norm(sender)
     if actor == selfName() or not FT.roster[actor] then return end
     local fields = {}
     for part in (message .. "|"):gmatch("(.-)|") do table.insert(fields, part) end
+    if (fields[1] == "PROF" or fields[1] == "PREF" or fields[1] == "PROFILE" or fields[1] == "ATTUNE") then
+      if channel ~= "WHISPER" then return end
+      local allowed=FT:IsGuildOfficer(selfName())
+      for id, team in pairs(FT.teams) do
+        if (team.members[actor] or team.owner == actor or (FT.requests[id] and FT.requests[id][actor])) and
+          FT:CanSeeDetails(team, selfName()) then allowed=true; break end
+      end
+      if not allowed then return end
+    elseif channel ~= "GUILD" then return end
     if fields[1] == "HELLO" then syncTeams(); return end
     apply(fields[1], fields, actor)
   end
