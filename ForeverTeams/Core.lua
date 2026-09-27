@@ -129,6 +129,7 @@ local function save()
       end
       for who in pairs(FT.professions) do if not allowed(who) then FT.professions[who]=nil end end
       for who in pairs(FT.playerInfo) do if not allowed(who) then FT.playerInfo[who]=nil end end
+      for who in pairs(FT.profiles) do if not allowed(who) then FT.profiles[who]=nil end end
       for who in pairs(FT.attunements) do if not allowed(who) then FT.attunements[who]=nil end end
       for id, requests in pairs(FT.requests) do
         if not FT:CanManage(FT.teams[id], selfName()) then
@@ -146,6 +147,7 @@ local function save()
     FT.db.invitations = FT.invitations
     FT.db.professions = FT.professions
     FT.db.playerInfo = FT.playerInfo
+    FT.db.profiles = FT.profiles
     FT.db.attunements = FT.attunements
     FT.db.deleted = FT.deleted
   end
@@ -181,7 +183,7 @@ local function apply(op, f, actor)
   if op == "PROFILE" then
     if f[2] ~= actor or not role(f[3]) or not role(f[4], true) then return end
     FT.profiles[actor] = { main = f[3], off = f[4] }
-    if FT.db then FT.db.profiles = FT.profiles end
+    save()
     FT:Refresh()
     return
   end
