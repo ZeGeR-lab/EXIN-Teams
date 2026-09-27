@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Fixed the sidebar's extra empty team buttons and automatically open the first team in Your Teams when no team is selected.
+- Send private addon updates only to guild roster members currently online and target their full canonical character names. A single connection check reports when no other guild member running EXIN Teams answers; refresh reruns the check.
+- Added an Activity log button for members, team owners, and guild officers. It retains up to 80 local entries per team for joins, departures, promotions, team message/focus/color changes, guild-note membership changes, and new events.
+- Preserve full first and surname character identities instead of discarding text after a hyphen, and display the two parts with a space on team rosters. Existing first-name-only saved entries migrate only when one unambiguous guild roster match exists. `/exin namecheck` reports what this Forever client actually returns for the current character.
+- Temporarily grant the Ex Inferno guild character `Snoop Warg` full administrator permissions regardless of guild rank. The override requires that exact roster character name and guild; notes and Discord names cannot activate it.
+- Split the team list into Your Teams and Other Teams with page controls, so every guild member can browse all advertised teams and apply. Other-team rosters show names and online status without private role, guild note, profession, or attunement details.
+- Guild leader (rank 0) and officers (rank 1) can create, delete, and manage any team. An in-game `Team Leader` or color-specific `Team Leader Blue` rank may create and manage only their own team when their public note is `Blue - DiscordName` (or uses that team's exact name). The guild rank supplies authority; the note identifies the team.
+- Team Leaders create teams in the color named by their note and can delete their own teams. Guild officers can also change team officers on any roster.
+- Parse the Discord name after the separator in guild notes such as `Black - Sicnus` and show it on authorized team roster hover details.
+- Highlight team members without a valid guild note in yellow and list everyone needing a note on the team roster. Valid notes for another team remain valid for members of multiple teams.
+
 ## 0.3.0 — 2026-09-27
 
 ### Added

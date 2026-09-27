@@ -159,7 +159,7 @@ local function ask(titleText, default, callback)
   StaticPopup_Show("FOREVER_TEAMS_INPUT")
 end
 local function chosen() return FT.teams[FT.selected] end
-local function me() return (UnitName("player") or ""):lower() end
+local function me() return FT:SelfName() end
 local function canSee(team) return FT:CanSeeDetails(team, me()) end
 local function sortedTeams()
   local list = {}
@@ -202,23 +202,40 @@ local function hover(x,y,width,detail)
   return f
 end
 local newTeamButton=button(teamPage, "New team", 20, -44, 85, function()
-  if not FT:CanCreate(me()) then FT:Notice("Only guild officers and the guild leader can create teams."); return end
+  if not FT:CanCreate(me()) then FT:Notice("Only guild officers or Team Leaders with a valid guild note can create teams."); return end
   ask("Team name (up to 24 characters)", "", function(name)
     name = name:match("^%s*(.-)%s*$")
     if #name < 2 or #name > 24 then FT:Notice("Use a name of 2–24 characters."); return end
     local id = me() .. "-" .. tostring(time()) .. "-" .. tostring(math.floor(GetTime() * 1000) % 100000)
-    FT:Act("NEW", id, name, "General", "Welcome to " .. name, me(), "White")
-    FT.selected = id; FT:Refresh()
+    local color=FT:LeaderColor(me()) or "White"
+    if not FT:CanOwnTeam(me(),name,color) then
+      FT:Notice("Your guild note must name this team or its color before you can create it."); return
+    end
+    FT:Act("NEW", id, name, "General", "Welcome to " .. name, me(), color)
+    if FT.teams[id] then FT.selected = id; FT:Refresh() end
   end)
 end)
-button(teamPage, "Refresh", 110, -44, 75, function() FT:OpenGuild(); FT:Refresh() end)
+button(teamPage, "Refresh", 110, -44, 75, function()
+  if FT:OpenGuild() then FT:CheckConnection() end
+  FT:Refresh()
+end)
 local teamLabel = line(teamPage, 22, -82, 170, "small")
 teamLabel:SetText("|cff9bdd00YOUR TEAMS|r")
-for i=1,12 do
+local otherTeamLabel = line(teamPage, 22, -105, 170, "small")
+otherTeamLabel:SetText("|cff9bdd00OTHER TEAMS|r")
+local teamPageIndex=1
+for i=1,10 do
   teamRows[i] = button(teamPage, "", 20, -100-(i-1)*28, 170, function(self)
     FT.selected = self.teamID; FT:Refresh()
   end)
 end
+local teamListPage=line(teamPage,77,-400,65,"small")
+button(teamPage,"<",20,-392,40,function()
+  if teamPageIndex > 1 then teamPageIndex=teamPageIndex-1; FT:Refresh() end
+end)
+button(teamPage,">",147,-392,40,function()
+  teamPageIndex=teamPageIndex+1; FT:Refresh()
+end)
 local roleTitle = line(teamPage, 22, -433, 170, "small")
 roleTitle:SetText("|cff9bdd00DUNGEON ROLES|r")
 local mainRoleButton = button(teamPage, "Main: choose", 20, -450, 170, function()
@@ -261,6 +278,15 @@ local deleteButton=button(teamPage,"Delete team",20,-540,170,function()
   end
 end)
 local rosterTitle = line(teamPage, 210, -175, 480)
+local notesNeeded = button(teamPage,"Notes needed",570,-163,115,function() end)
+notesNeeded:SetScript("OnEnter",function(self)
+  GameTooltip:SetOwner(self,"ANCHOR_RIGHT")
+  GameTooltip:AddLine("Guild notes needed",1,0.82,0.35)
+  for _, name in ipairs(self.missing or {}) do GameTooltip:AddLine(name,1,0.82,0.35) end
+  GameTooltip:AddLine("Use Team - DiscordName in the guild member note.",1,1,1,true)
+  GameTooltip:Show()
+end)
+notesNeeded:SetScript("OnLeave",function() GameTooltip:Hide() end)
 
 rosterTitle:SetText("|cff9bdd00ROSTER|r")
 for i=1,9 do
@@ -274,6 +300,10 @@ for i=1,9 do
       GameTooltip:AddLine("Interests: "..info.interest,1,1,1,true)
     end
     local entry=FT.roster[self.who]
+    if not entry or not entry.noteTeam or not entry.discordName then
+      GameTooltip:AddLine("Guild note needed: Team - DiscordName",1,0.82,0.35,true)
+    end
+    if entry and entry.discordName then GameTooltip:AddLine("Discord: "..entry.discordName,0.8,0.85,1,true) end
     if entry and entry.note ~= "" then GameTooltip:AddLine("Guild note: "..entry.note,0.8,0.85,1,true) end
   end)
 end
@@ -298,8 +328,45 @@ for i=1,3 do
     end
   end)
 end
-local eventTitle = line(teamPage, 210, -475, 480)
+local eventTitle = line(teamPage, 210, -475, 365)
 eventTitle:SetText("|cff9bdd00TEAM EVENTS|r  |cff8b9b8bserver time|r")
+local activityPanel=CreateFrame("Frame",nil,UIParent,"BackdropTemplate")
+activityPanel:SetSize(610,420)
+activityPanel:SetPoint("CENTER")
+activityPanel:SetFrameStrata("FULLSCREEN_DIALOG")
+activityPanel:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",edgeFile="Interface\\DialogFrame\\UI-DialogBox-Border",edgeSize=24,
+  insets={left=8,right=8,top=8,bottom=8}})
+activityPanel:Hide()
+local activityTitle=line(activityPanel,20,-20,550)
+local activityRows={}
+local activityPage=1
+for i=1,12 do
+  activityRows[i]=line(activityPanel,22,-56-(i-1)*27,565,"small")
+  activityRows[i]:SetHeight(25)
+end
+local activityPageText=line(activityPanel,240,-383,130,"small")
+local function drawActivity()
+  local team=FT.teams[FT.selected]
+  if not team or not FT:CanSeeDetails(team,me()) then activityPanel:Hide(); return end
+  local entries=team.activity or {}
+  local pages=math.max(1,math.ceil(#entries/#activityRows))
+  if activityPage > pages then activityPage=pages end
+  activityTitle:SetText("|cff9bdd00TEAM ACTIVITY|r  "..team.name)
+  activityPageText:SetText("Page "..activityPage.." / "..pages)
+  for i,row in ipairs(activityRows) do
+    local record=entries[(activityPage-1)*#activityRows+i]
+    row:SetText(record and ("|cff8b9b8b"..date("%m/%d %H:%M",record.at or time()).."|r  "..(record.text or "")) or
+      (#entries == 0 and i == 1 and "No activity recorded yet." or ""))
+  end
+end
+button(activityPanel,"Previous",25,-375,90,function() if activityPage>1 then activityPage=activityPage-1; drawActivity() end end)
+button(activityPanel,"Next",390,-375,70,function() activityPage=activityPage+1; drawActivity() end)
+button(activityPanel,"Close",480,-375,90,function() activityPanel:Hide() end)
+local activityButton=button(teamPage,"Activity log",580,-470,105,function()
+  activityPage=1
+  drawActivity()
+  if FT.teams[FT.selected] and FT:CanSeeDetails(FT.teams[FT.selected],me()) then activityPanel:Show() end
+end)
 local eventButtons = {}
 for i=1,3 do
   eventRows[i] = line(teamPage, 215, -495-(i-1)*22, 350, "small")
@@ -354,26 +421,26 @@ end)
 control("Invite",430,-135,60,function()
   local team=chosen(); if not team or not FT:CanManage(team,me()) then return end
   ask("Guild member to invite", "", function(name)
-    local who=name:lower():gsub("%-.*$", "")
+    local who=name:lower():gsub("%s+", "-")
     if FT.roster[who] then FT:Act("INVITE",team.id,who) else FT:Notice("That character is not in the loaded guild roster.") end
   end)
 end)
 control("Add",495,-135,66,function()
   local team=chosen(); if not team or not FT:CanManage(team,me()) then return end
   ask("Guild member to add to the active roster (addon optional)", "", function(name)
-    local who=name:lower():gsub("%-.*$", "")
+    local who=name:lower():gsub("%s+", "-")
     if FT.roster[who] then FT:Act("ADD",team.id,who)
     else FT:Notice("That character is not in the loaded guild roster.") end
   end)
 end)
 control("Remove",565,-135,70,function()
   local team=chosen(); if not team or not FT:CanManage(team,me()) then return end
-  ask("Member to remove", "", function(name) FT:Act("REMOVE",team.id,name:lower():gsub("%-.*$", "")) end)
+  ask("Member to remove", "", function(name) FT:Act("REMOVE",team.id,name:lower():gsub("%s+", "-")) end)
 end)
 control("Role",638,-135,48,function()
-  local team=chosen(); if not team or (team.owner ~= me() and not FT:IsGuildLeader(me())) then return end
+  local team=chosen(); if not team or not (FT:IsGuildOfficer(me()) or (team.owner == me() and FT:CanManage(team,me()))) then return end
   ask("Member name to toggle officer role", "", function(name)
-    local who=name:lower():gsub("%-.*$", "")
+    local who=name:lower():gsub("%s+", "-")
     if team.members[who] and who ~= team.owner then
       FT:Act("ROLE",team.id,who,team.members[who]=="officer" and "member" or "officer")
     end
@@ -617,11 +684,30 @@ local function drawQuests()
 end
 
 local function drawTeams()
-  local list=sortedTeams()
+  local mine, others={},{}
+  for _, team in ipairs(sortedTeams()) do
+    if team.members[me()] or team.owner == me() then table.insert(mine,team)
+    else table.insert(others,team) end
+  end
+  local list={}
+  for _, team in ipairs(mine) do table.insert(list,{team=team,own=true}) end
+  for _, team in ipairs(others) do table.insert(list,{team=team,own=false}) end
+  local pages=math.max(1,math.ceil(#list/10))
+  if teamPageIndex > pages then teamPageIndex=pages end
+  local pageStart=(teamPageIndex-1)*10+1
+  local ownCount=math.max(0,math.min(#mine-pageStart+1,10))
+  teamLabel:SetText("|cff9bdd00YOUR TEAMS|r  |cff8b9b8b"..#mine.."|r")
+  otherTeamLabel:SetText("|cff9bdd00OTHER TEAMS|r  |cff8b9b8b"..#others.."|r")
+  otherTeamLabel:ClearAllPoints()
+  otherTeamLabel:SetPoint("TOPLEFT",22,-102-ownCount*25)
+  teamListPage:SetText(teamPageIndex.." / "..pages)
   for i,b in ipairs(teamRows) do
-    local team=list[i]
+    local item=list[pageStart+i-1]
+    local team=item and item.team
     b.teamID=team and team.id
     b:SetShown(team ~= nil)
+    b:ClearAllPoints()
+    b:SetPoint("TOPLEFT",20,(item and item.own) and (-100-(i-1)*25) or (-120-(i-1)*25))
     if team then
       b:SetText((team.id == FT.selected and "● " or "  ") .. team.name)
       if team.id == FT.selected then b:LockHighlight() else b:UnlockHighlight() end
@@ -631,6 +717,10 @@ local function drawTeams()
     end
   end
   local team=chosen()
+  if not team and #mine > 0 then
+    FT.selected=mine[1].id
+    team=mine[1]
+  end
   if not team then
     header:SetText("Choose a team or create one")
     message:SetText("Join multiple teams. Team data syncs among guild members running EXIN Teams.")
@@ -642,6 +732,19 @@ local function drawTeams()
     accent:SetVertexColor(tonumber(hex:sub(1,2),16)/255, tonumber(hex:sub(3,4),16)/255, tonumber(hex:sub(5,6),16)/255)
   end
   local members=team and sortedMembers(team) or {}
+  local missingNotes={}
+  if team and canSee(team) then
+    for _, who in ipairs(members) do
+      local entry=FT.roster[who]
+      if not entry or not entry.noteTeam or not entry.discordName then
+        table.insert(missingNotes,entry and entry.name or who)
+      end
+    end
+  end
+  notesNeeded.missing=missingNotes
+  activityButton:SetShown(team ~= nil and canSee(team) and true or false)
+  notesNeeded:SetShown(team ~= nil and canSee(team) and #missingNotes > 0)
+  notesNeeded:SetText("Notes needed ("..#missingNotes..")")
   newTeamButton:SetEnabled(FT:CanCreate(me()) and true or false)
   participationButton:SetShown(team and team.owner==me() and true or false)
   participationButton:SetText(team and team.members[me()] and "Leave active roster" or "Join active roster")
@@ -653,10 +756,12 @@ local function drawTeams()
     rosterHover[i]:SetShown(who ~= nil and canSee(team) and true or false)
     if who then
       local data=FT.roster[who]
-      local profile=FT.profiles[who]
-      local dungeonRole=profile and ("  |cffc9d5df"..profile.main..(profile.off ~= "None" and "/"..profile.off or "").."|r") or "  |cff778899role unset|r"
+      local allowed=canSee(team)
+      local needsNote=allowed and (not data or not data.noteTeam or not data.discordName)
+      local profile=allowed and FT.profiles[who]
+      local dungeonRole=not allowed and "" or profile and ("  |cffc9d5df"..profile.main..(profile.off ~= "None" and "/"..profile.off or "").."|r") or "  |cff778899role unset|r"
       t:SetText(((who == me() or data and data.online) and "|cff44dd77●|r " or "|cff888888○|r ") ..
-        (data and data.name or who) .. "  |cff9aabb4" .. team.members[who] .. "|r  " ..
+        (needsNote and "|cffffcc55" or "|cffffffff") .. ((data and data.name or who):gsub("%-", " ")) .. "|r  |cff9aabb4" .. team.members[who] .. "|r  " ..
         (data and data.class or "") .. dungeonRole)
     else t:SetText("") end
   end
@@ -696,6 +801,7 @@ local function drawTeams()
   offRoleButton:SetText("Off: "..(own and own.off or "None"))
 end
 function FT:Draw()
+  if activityPanel:IsShown() then drawActivity() end
   if not panel:IsShown() then return end
   if currentPage == "attunements" then
     drawAttunements()
@@ -707,7 +813,15 @@ function FT:Draw()
 end
 SLASH_FOREVERTEAMS1 = "/teams"
 SLASH_FOREVERTEAMS2 = "/exin"
-SlashCmdList.FOREVERTEAMS = function()
+SlashCmdList.FOREVERTEAMS = function(command)
+  if command and command:lower():match("^%s*namecheck%s*$") then
+    local own=FT:SelfName()
+    local guild=FT.roster[own]
+    FT:Notice("Name check: UnitFullName="..tostring(UnitFullName and UnitFullName("player"))..
+      "; guild roster="..tostring(guild and guild.name or "not matched")..
+      "; character key="..own)
+    return
+  end
   if panel:IsShown() then panel:Hide()
   elseif FT:OpenGuild() then panel:Show(); FT:Refresh() end
 end

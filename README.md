@@ -18,7 +18,7 @@ Each participating guild member needs the addon for live updates. Character prof
 - Automatic capture of the character's primary professions and skill ranks when the game API supplies them; roster hover text includes professions and main/off dungeon roles.
 - Team events with RSVP, guild roster online status, and guild addon-message sync.
 - Pending applications and invitations saved through logout and reannounced on reconnect.
-- Guild officers create teams; an officer can delete their own team and the guild leader can delete any. The owner chooses whether to participate on the active roster.
+- Guild leader (rank 0) and officers (rank 1) create, delete, and manage any team. The in-game Team Leader rank may create and manage its own team when its public note identifies the team color or name. The owner chooses whether to participate on the active roster.
 - Public guild notes such as `Black - Sicnus` assign a primary team; team managers can add guild members without the addon.
 - Professions, roles, preferences, and attunement reports are shared privately with team members and guild officers. The Recruitment button saves a message and posts it to Trade only when clicked.
 - **Attunements tab:** shows Complete, In progress, Missing, or No report for authorized members of the selected team. Each character checks its own quest history and shares a compact readiness report with their team and guild officers running EXIN Teams.
