@@ -1,6 +1,6 @@
 # EXIN Teams
 
-A guild team manager addon for **Ex Inferno** on WoW Forever. Guild members can belong to multiple teams, apply or accept invitations, choose dungeon roles, and see team rosters, events, and messages.
+A guild team manager addon for **Ex Inferno** on WoW Forever. Guild members can belong to multiple teams, apply or accept invitations, choose dungeon roles, review raid attunement readiness, and track Forever dungeon quests.
 
 ## Install
 
@@ -18,9 +18,14 @@ Each participating guild member needs the addon for live updates. Character prof
 - Automatic capture of the character's primary professions and skill ranks when the game API supplies them; roster hover text includes professions and main/off dungeon roles.
 - Team events with RSVP, guild roster online status, and guild addon-message sync.
 - Pending applications and invitations saved through logout and reannounced on reconnect.
+- **Attunements tab:** shows Complete, In progress, Missing, or No report for every member of the selected team. Each character checks its own quest history and shares a compact readiness report with guild members running EXIN Teams.
+- **Dungeon quests tab:** covers all 66 dungeon quests currently exposed by the Forever beta across 10 dungeons, including pickup directions, faction/class restrictions, and automatic Completed/In quest log/Not completed status for the current character.
+- Placeholders for the seven announced later-level Forever dungeons whose quest IDs and pickup locations have not yet been published.
 
 ## Current limitations
 
-This is a beta prototype. Live synchronization and profession sharing need two-client in-game testing. Team leaders currently cannot transfer ownership or delete a team. The UI shows up to 12 teams, 9 roster members, 3 applications, and 3 events at a time. Team data is stored in each client's SavedVariables and synchronized by guild addon messages; do not rely on it as the only permanent record of guild organization.
+This is a beta prototype. Live synchronization, profession sharing, and attunement reporting need two-client in-game testing. A member's raid status is unavailable until that character logs in with the same EXIN Teams data version; WoW does not let one client inspect another character's quest history directly. Barrow Deeps and Hyjal Summit remain marked "not published" until Blizzard reveals their requirements. Molten Core, Blackwing Lair, and Naxxramas use their known Classic requirements as later/unconfirmed references and may change for Forever.
+
+Dungeon quest data reflects the Forever beta quest cache for build `1.60.1.70009`. Forever is still changing, so new or revised quest IDs will require an addon update. Team leaders currently cannot transfer ownership or delete a team. The Teams page shows up to 12 teams, 9 roster members, 3 applications, and 3 events at a time; the Attunements page shows up to 17 members. Team data is stored in each client's SavedVariables and synchronized by guild addon messages; do not rely on it as the only permanent record of guild organization.
 
 See [CHANGELOG.md](CHANGELOG.md) for changes and [ForeverTeams/README.txt](ForeverTeams/README.txt) for in-game usage notes.

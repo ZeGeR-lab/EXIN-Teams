@@ -8,6 +8,21 @@ accent to that team's chosen color.
 Keep the folder named ForeverTeams so existing SavedVariables are preserved.
 Each participating guild member needs the addon installed for live sync.
 
+NEW IN 0.2.0
+Use the Attunements tab to choose a raid and see who is Missing, In progress,
+Complete, or has No report. Select a team on the Teams tab first to narrow the
+readiness list to that team; with no team selected it uses the guild roster.
+WoW only exposes quest history for the character being played, so every member
+must log in with EXIN Teams 0.2.0 to share their own status. Barrow Deeps and
+Hyjal Summit stay marked Not published until Blizzard reveals their rules.
+
+Use the Dungeon quests tab to select a Forever dungeon. Each quest shows where
+it starts and whether this character has completed it, has it in the quest log,
+or has not completed it. Quests for another faction or class are dimmed instead
+of counted as missing. The list contains the 66 quests currently exposed by the
+Forever beta across 10 dungeons. Announced later dungeons remain marked Pending
+until their quest IDs and locations are published.
+
 START
 Create a team, set its focus and team message, then invite a guild member
 by character name. The invitee opens /teams and clicks Join invite.

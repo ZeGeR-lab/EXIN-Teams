@@ -1,6 +1,6 @@
 local _, FT = ...
 local panel = CreateFrame("Frame", "ForeverTeamsPanel", UIParent, "BackdropTemplate")
-panel:SetSize(710, 580)
+panel:SetSize(780, 620)
 panel:SetPoint("CENTER")
 panel:SetFrameStrata("DIALOG")
 panel:SetMovable(true)
@@ -13,24 +13,30 @@ panel:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background", edg
 panel:SetBackdropColor(0.035, 0.045, 0.06, 0.98)
 panel:SetBackdropBorderColor(0.34, 0.45, 0.25, 1)
 panel:Hide()
-local function card(x, y, width, height)
-  local border = panel:CreateTexture(nil, "BACKGROUND")
+local teamPage = CreateFrame("Frame", nil, panel)
+teamPage:SetAllPoints(panel)
+local attunementPage = CreateFrame("Frame", nil, panel)
+attunementPage:SetAllPoints(panel)
+local questPageFrame = CreateFrame("Frame", nil, panel)
+questPageFrame:SetAllPoints(panel)
+local function card(parent, x, y, width, height)
+  local border = parent:CreateTexture(nil, "BACKGROUND")
   border:SetTexture("Interface\\Buttons\\WHITE8X8")
   border:SetPoint("TOPLEFT", x, y)
   border:SetSize(width, height)
   border:SetVertexColor(0.20, 0.26, 0.22, 0.95)
-  local fill = panel:CreateTexture(nil, "BACKGROUND", nil, 1)
+  local fill = parent:CreateTexture(nil, "BACKGROUND", nil, 1)
   fill:SetTexture("Interface\\Buttons\\WHITE8X8")
   fill:SetPoint("TOPLEFT", x+1, y-1)
   fill:SetSize(width-2, height-2)
   fill:SetVertexColor(0.08, 0.10, 0.13, 0.95)
 end
-card(12, -40, 185, 480)
-card(202, -40, 495, 87)
-card(202, -168, 495, 185)
-card(202, -357, 495, 78)
-card(202, -468, 495, 100)
-local accent = panel:CreateTexture(nil, "BACKGROUND", nil, 2)
+card(teamPage, 12, -40, 185, 480)
+card(teamPage, 202, -40, 495, 87)
+card(teamPage, 202, -168, 495, 185)
+card(teamPage, 202, -357, 495, 78)
+card(teamPage, 202, -468, 495, 100)
+local accent = teamPage:CreateTexture(nil, "BACKGROUND", nil, 2)
 accent:SetTexture("Interface\\Buttons\\WHITE8X8")
 accent:SetPoint("TOPLEFT", 203, -41)
 accent:SetSize(493, 3)
@@ -43,8 +49,8 @@ local function line(parent, x, y, width, size)
   if size == "small" then t:SetFontObject(GameFontHighlightSmall) end
   return t
 end
-local title = line(panel, 20, -17, 500)
-title:SetText("|cff9bdd00EXIN TEAMS|r  |cff8b9b8bEx Inferno guild dashboard|r")
+local title = line(panel, 20, -17, 250)
+title:SetText("|cff9bdd00EXIN TEAMS|r  |cff8b9b8bEx Inferno|r")
 local function button(parent, label, x, y, w, fn)
   local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
   b:SetSize(w, 24)
@@ -53,10 +59,29 @@ local function button(parent, label, x, y, w, fn)
   b:SetScript("OnClick", fn)
   return b
 end
-button(panel, "X", 665, -14, 25, function() panel:Hide() end)
-local header = line(panel, 210, -50, 470)
+local closeButton = button(panel, "X", 735, -14, 25, function() panel:Hide() end)
+closeButton:SetFrameLevel(panel:GetFrameLevel()+10)
+local currentPage = "teams"
+local pageFrames = {teams=teamPage, attunements=attunementPage, quests=questPageFrame}
+local pageButtons = {}
+local function selectPage(name)
+  currentPage = name
+  for key, page in pairs(pageFrames) do page:SetShown(key == name) end
+  for key, tab in pairs(pageButtons) do
+    if key == name then tab:LockHighlight() else tab:UnlockHighlight() end
+  end
+  FT:Refresh()
+end
+pageButtons.teams = button(panel, "Teams", 275, -12, 95, function() selectPage("teams") end)
+pageButtons.attunements = button(panel, "Attunements", 375, -12, 125, function() selectPage("attunements") end)
+pageButtons.quests = button(panel, "Dungeon quests", 505, -12, 145, function() selectPage("quests") end)
+for _, tab in pairs(pageButtons) do tab:SetFrameLevel(panel:GetFrameLevel()+10) end
+pageButtons.teams:LockHighlight()
+attunementPage:Hide()
+questPageFrame:Hide()
+local header = line(teamPage, 210, -50, 470)
 header:SetFontObject(GameFontNormalLarge)
-local message = line(panel, 210, -78, 475, "small")
+local message = line(teamPage, 210, -78, 475, "small")
 message:SetHeight(38)
 local teamRows, rosterRows, requestRows, eventRows = {}, {}, {}, {}
 local rosterHover, requestHover = {}, {}
@@ -105,7 +130,7 @@ local function professionText(who)
   return #result > 0 and table.concat(result, ", ") or "None recorded"
 end
 local function hover(x,y,width,detail)
-  local f=CreateFrame("Frame",nil,panel)
+  local f=CreateFrame("Frame",nil,teamPage)
   f:SetPoint("TOPLEFT",x,y)
   f:SetSize(width,19)
   f:EnableMouse(true)
@@ -121,7 +146,7 @@ local function hover(x,y,width,detail)
   f:Hide()
   return f
 end
-button(panel, "New team", 20, -44, 85, function()
+button(teamPage, "New team", 20, -44, 85, function()
   ask("Team name (up to 24 characters)", "", function(name)
     name = name:match("^%s*(.-)%s*$")
     if #name < 2 or #name > 24 then FT:Notice("Use a name of 2–24 characters."); return end
@@ -130,34 +155,34 @@ button(panel, "New team", 20, -44, 85, function()
     FT.selected = id; FT:Refresh()
   end)
 end)
-button(panel, "Refresh", 110, -44, 75, function() FT:OpenGuild(); FT:Refresh() end)
-local teamLabel = line(panel, 22, -82, 170, "small")
+button(teamPage, "Refresh", 110, -44, 75, function() FT:OpenGuild(); FT:Refresh() end)
+local teamLabel = line(teamPage, 22, -82, 170, "small")
 teamLabel:SetText("|cff9bdd00YOUR TEAMS|r")
 for i=1,12 do
-  teamRows[i] = button(panel, "", 20, -100-(i-1)*28, 170, function(self)
+  teamRows[i] = button(teamPage, "", 20, -100-(i-1)*28, 170, function(self)
     FT.selected = self.teamID; FT:Refresh()
   end)
 end
-local roleTitle = line(panel, 22, -433, 170, "small")
+local roleTitle = line(teamPage, 22, -433, 170, "small")
 roleTitle:SetText("|cff9bdd00DUNGEON ROLES|r")
-local mainRoleButton = button(panel, "Main: choose", 20, -450, 170, function()
+local mainRoleButton = button(teamPage, "Main: choose", 20, -450, 170, function()
   local profile = FT.profiles[me()] or {main="DPS", off="None"}
   local order = {"Tank", "Healer", "DPS"}
   local index = 0
   for i, value in ipairs(order) do if value == profile.main then index = i end end
   FT:Act("PROFILE", me(), order[index % #order + 1], profile.off)
 end)
-local offRoleButton = button(panel, "Off: none", 20, -480, 170, function()
+local offRoleButton = button(teamPage, "Off: none", 20, -480, 170, function()
   local profile = FT.profiles[me()] or {main="DPS", off="None"}
   local order = {"None", "Tank", "Healer", "DPS"}
   local index = 1
   for i, value in ipairs(order) do if value == profile.off then index = i end end
   FT:Act("PROFILE", me(), profile.main, order[index % #order + 1])
 end)
-local rosterTitle = line(panel, 210, -175, 480)
+local rosterTitle = line(teamPage, 210, -175, 480)
 rosterTitle:SetText("|cff9bdd00ROSTER|r")
 for i=1,9 do
-  rosterRows[i] = line(panel, 215, -195-(i-1)*19, 460, "small")
+  rosterRows[i] = line(teamPage, 215, -195-(i-1)*19, 460, "small")
   rosterHover[i] = hover(213,-192-(i-1)*19,460,function(self)
     local profile=FT.profiles[self.who]
     if profile then GameTooltip:AddLine("Dungeon roles: "..profile.main.." / "..profile.off,0.8,0.85,1) end
@@ -168,12 +193,12 @@ for i=1,9 do
     end
   end)
 end
-local requestTitle = line(panel, 210, -365, 480)
+local requestTitle = line(teamPage, 210, -365, 480)
 requestTitle:SetText("|cff9bdd00APPLICATIONS|r")
 local requestButtons = {}
 for i=1,3 do
-  requestRows[i] = line(panel, 215, -384-(i-1)*20, 340, "small")
-  requestButtons[i] = button(panel, "Accept", 575, -378-(i-1)*20, 75, function(self)
+  requestRows[i] = line(teamPage, 215, -384-(i-1)*20, 340, "small")
+  requestButtons[i] = button(teamPage, "Accept", 575, -378-(i-1)*20, 75, function(self)
     local team = chosen()
     if team and self.applicant and FT:CanManage(team, me()) then
       FT:Act("ACCEPT", team.id, self.applicant)
@@ -189,12 +214,12 @@ for i=1,3 do
     end
   end)
 end
-local eventTitle = line(panel, 210, -475, 480)
+local eventTitle = line(teamPage, 210, -475, 480)
 eventTitle:SetText("|cff9bdd00TEAM EVENTS|r  |cff8b9b8bserver time|r")
 local eventButtons = {}
 for i=1,3 do
-  eventRows[i] = line(panel, 215, -495-(i-1)*22, 350, "small")
-  eventButtons[i] = button(panel,"Join",575,-489-(i-1)*22,75,function(self)
+  eventRows[i] = line(teamPage, 215, -495-(i-1)*22, 350, "small")
+  eventButtons[i] = button(teamPage,"Join",575,-489-(i-1)*22,75,function(self)
     local team=chosen()
     if team and team.members[me()] and self.eventID then
       FT:Act("RSVP",team.id,self.eventID,self.attending and "no" or "yes")
@@ -203,7 +228,7 @@ for i=1,3 do
 end
 local controls = {}
 local function control(label,x,y,w,fn)
-  local b=button(panel,label,x,y,w,fn)
+  local b=button(teamPage,label,x,y,w,fn)
   table.insert(controls,b)
   return b
 end
@@ -295,8 +320,213 @@ control("Team color",510,-442,100,function()
   for i,color in ipairs(FT.colors) do if color.name == team.color then index=i; break end end
   FT:Act("COLOR",team.id,FT.colors[index % #FT.colors + 1].name)
 end)
-function FT:Draw()
-  if not panel:IsShown() then return end
+
+card(attunementPage, 12, -44, 190, 556)
+card(attunementPage, 208, -44, 558, 556)
+local attunementListTitle = line(attunementPage, 22, -55, 170, "small")
+attunementListTitle:SetText("|cff9bdd00RAIDS|r")
+local selectedAttunement = 1
+local attunementButtons = {}
+for index=1,#(FT.attunementData or {}) do
+  attunementButtons[index] = button(attunementPage, "", 20, -75-(index-1)*30, 174, function(self)
+    selectedAttunement = self.raidIndex
+    FT:Refresh()
+  end)
+  attunementButtons[index].raidIndex = index
+end
+local attunementScope = line(attunementPage, 22, -272, 168, "small")
+attunementScope:SetHeight(62)
+attunementScope:SetJustifyV("TOP")
+local attunementHelp = line(attunementPage, 22, -345, 168, "small")
+attunementHelp:SetHeight(115)
+attunementHelp:SetJustifyV("TOP")
+attunementHelp:SetText("|cff9bdd00HOW IT WORKS|r\nEach player checks their own quest history and shares one compact readiness report through guild addon messages. No report means that character has not synced this version yet.")
+button(attunementPage, "Refresh my status", 20, -560, 174, function()
+  FT:UpdateAttunements(true)
+  FT:Notice("Your raid readiness was refreshed and shared with the guild.")
+end)
+local attunementHeader = line(attunementPage, 220, -58, 530)
+attunementHeader:SetFontObject(GameFontNormalLarge)
+local attunementMeta = line(attunementPage, 220, -84, 530, "small")
+local attunementRequirement = line(attunementPage, 220, -106, 530, "small")
+attunementRequirement:SetHeight(48)
+attunementRequirement:SetJustifyV("TOP")
+local attunementSummary = line(attunementPage, 220, -162, 530, "small")
+local attunementRows = {}
+for index=1,17 do
+  attunementRows[index] = line(attunementPage, 225, -188-(index-1)*22, 520, "small")
+end
+
+card(questPageFrame, 12, -44, 210, 556)
+card(questPageFrame, 228, -44, 538, 556)
+local dungeonListTitle = line(questPageFrame, 22, -55, 190, "small")
+dungeonListTitle:SetText("|cff9bdd00FOREVER DUNGEONS|r")
+local selectedDungeon = 1
+local selectedQuestPage = 1
+local dungeonButtons = {}
+for index=1,#(FT.dungeonData or {}) do
+  dungeonButtons[index] = button(questPageFrame, "", 20, -75-(index-1)*28, 194, function(self)
+    selectedDungeon = self.dungeonIndex
+    selectedQuestPage = 1
+    FT:Refresh()
+  end)
+  dungeonButtons[index].dungeonIndex = index
+end
+button(questPageFrame, "Refresh quest status", 20, -562, 194, function()
+  FT:RefreshQuestCache()
+  FT:Refresh()
+end)
+local dungeonHeader = line(questPageFrame, 240, -58, 510)
+dungeonHeader:SetFontObject(GameFontNormalLarge)
+local dungeonMeta = line(questPageFrame, 240, -84, 510, "small")
+local questLegend = line(questPageFrame, 240, -108, 510, "small")
+questLegend:SetText("|cff44dd77Completed|r   |cffffcc55In quest log|r   |cffff7777Not completed|r   |cff778899Other faction/class|r")
+local questPending = line(questPageFrame, 240, -150, 505)
+questPending:SetHeight(90)
+questPending:SetJustifyV("TOP")
+local questRows = {}
+for index=1,6 do
+  local top = -142-(index-1)*67
+  questRows[index] = {
+    name=line(questPageFrame, 242, top, 505),
+    pickup=line(questPageFrame, 252, top-20, 493, "small"),
+  }
+  questRows[index].pickup:SetHeight(40)
+  questRows[index].pickup:SetJustifyV("TOP")
+end
+local questPageText = line(questPageFrame, 480, -568, 90, "small")
+questPageText:SetJustifyH("CENTER")
+local questPrev = button(questPageFrame, "Previous", 385, -561, 90, function()
+  if selectedQuestPage > 1 then selectedQuestPage = selectedQuestPage - 1; FT:Refresh() end
+end)
+local questNext = button(questPageFrame, "Next", 575, -561, 90, function()
+  selectedQuestPage = selectedQuestPage + 1
+  FT:Refresh()
+end)
+
+local attunementLabels = {
+  C="|cff44dd77Complete|r", P="|cffffcc55In progress|r", M="|cffff7777Missing|r",
+  U="|cff9aabb4Not published|r", N="|cff9aabb4No report|r",
+}
+local questLabels = {
+  C="|cff44dd77Completed|r", P="|cffffcc55In quest log|r",
+  M="|cffff7777Not completed|r", X="|cff778899Not available|r",
+}
+local function attunementMembers()
+  local members = {}
+  local team = chosen()
+  if team then
+    return sortedMembers(team), team.name
+  end
+  for who in pairs(FT.roster) do table.insert(members, who) end
+  local found
+  for _, who in ipairs(members) do if who == me() then found = true end end
+  if not found then table.insert(members, me()) end
+  table.sort(members)
+  return members, "Guild roster"
+end
+local function memberAttunementState(who, index)
+  local raid = FT.attunementData[index]
+  if raid and not raid.published then return "U" end
+  local report = FT.attunements[who]
+  if not report or report.version ~= (FT.progressVersion or 1) or type(report.states) ~= "string" then return "N" end
+  local state = report.states:sub(index,index)
+  return attunementLabels[state] and state or "N"
+end
+local function drawAttunements()
+  local raid = FT.attunementData[selectedAttunement] or FT.attunementData[1]
+  if not raid then return end
+  local members, scope = attunementMembers()
+  local counts = {C=0,P=0,M=0,U=0,N=0}
+  local ordered = {}
+  local priority = {M=1,P=2,N=3,C=4,U=5}
+  for _, who in ipairs(members) do
+    local state = memberAttunementState(who, selectedAttunement)
+    counts[state] = (counts[state] or 0) + 1
+    table.insert(ordered, {who=who,state=state})
+  end
+  table.sort(ordered, function(a,b)
+    if priority[a.state] == priority[b.state] then return a.who < b.who end
+    return priority[a.state] < priority[b.state]
+  end)
+  for index, raidButton in ipairs(attunementButtons) do
+    local data = FT.attunementData[index]
+    raidButton:SetText((index == selectedAttunement and "● " or "  ") .. data.name)
+    if index == selectedAttunement then raidButton:LockHighlight() else raidButton:UnlockHighlight() end
+  end
+  attunementScope:SetText("|cff9bdd00TRACKING|r\n"..scope.."\n|cff8b9b8bSelect a team on the Teams tab to narrow this list.|r")
+  attunementHeader:SetText(raid.name)
+  attunementMeta:SetText("|cff9bdd00"..raid.size.."|r  •  "..raid.phase)
+  attunementRequirement:SetText(raid.requirement)
+  if raid.published then
+    attunementSummary:SetText("|cffff7777"..counts.M.." missing|r   |cffffcc55"..counts.P.." in progress|r   |cff44dd77"..counts.C.." complete|r   |cff9aabb4"..counts.N.." no report|r")
+  else
+    attunementSummary:SetText("|cff9aabb4Requirements are not published, so nobody is marked missing.|r")
+  end
+  for index, row in ipairs(attunementRows) do
+    local entry = ordered[index]
+    if entry then
+      local roster = FT.roster[entry.who]
+      local display = roster and roster.name or entry.who
+      local online = entry.who == me() or roster and roster.online
+      row:SetText((online and "|cff44dd77●|r " or "|cff777777○|r ")..display.."  "..attunementLabels[entry.state])
+    else
+      row:SetText("")
+    end
+  end
+end
+local function drawQuests()
+  FT:RefreshQuestCache()
+  local dungeon = FT.dungeonData[selectedDungeon] or FT.dungeonData[1]
+  if not dungeon then return end
+  for index, dungeonButton in ipairs(dungeonButtons) do
+    local data = FT.dungeonData[index]
+    local suffix = ""
+    if data.pending then
+      suffix = " |cff778899(pending)|r"
+    else
+      local complete, eligible = 0, 0
+      for _, quest in ipairs(data.quests or {}) do
+        local state = FT:QuestState(quest)
+        if state ~= "X" then eligible = eligible + 1 end
+        if state == "C" then complete = complete + 1 end
+      end
+      suffix = " |cff778899"..complete.."/"..eligible.."|r"
+    end
+    dungeonButton:SetText((index == selectedDungeon and "● " or "  ")..(data.short or data.name)..suffix)
+    if index == selectedDungeon then dungeonButton:LockHighlight() else dungeonButton:UnlockHighlight() end
+  end
+  dungeonHeader:SetText(dungeon.name)
+  dungeonMeta:SetText("|cff9bdd00Group Finder "..(dungeon.finder or "TBA").."|r  •  Quest completion is for this character")
+  local quests = dungeon.quests or {}
+  local perPage = #questRows
+  local pages = math.max(1, math.ceil(#quests/perPage))
+  if selectedQuestPage > pages then selectedQuestPage = pages end
+  questPending:SetText(dungeon.pending and ("|cffffcc55Quest data not published yet.|r\n\n"..(dungeon.note or "This entry will be updated when Forever exposes its quest IDs.")) or "")
+  questPending:SetShown(dungeon.pending and true or false)
+  for index, row in ipairs(questRows) do
+    local quest = quests[(selectedQuestPage-1)*perPage+index]
+    row.name:SetShown(quest ~= nil)
+    row.pickup:SetShown(quest ~= nil)
+    if quest then
+      local state = FT:QuestState(quest)
+      local restrictions = quest.side and (" • "..quest.side) or ""
+      if quest.class then restrictions = restrictions.." • "..quest.class:sub(1,1)..quest.class:sub(2):lower() end
+      row.name:SetText(questLabels[state].."  |cffffffff"..quest.name.."|r  |cff9aabb4Lv "..quest.level..restrictions.."|r")
+      local details = "Starts: "..quest.pickup
+      if quest.note then details = details.."\n|cff9aabb4"..quest.note.."|r" end
+      row.pickup:SetText(details)
+    end
+  end
+  questPageText:SetText("Page "..selectedQuestPage.." / "..pages)
+  questPageText:SetShown(not dungeon.pending and #quests > 0)
+  questPrev:SetShown(not dungeon.pending and pages > 1)
+  questNext:SetShown(not dungeon.pending and pages > 1)
+  questPrev:SetEnabled(selectedQuestPage > 1)
+  questNext:SetEnabled(selectedQuestPage < pages)
+end
+
+local function drawTeams()
   local list=sortedTeams()
   for i,b in ipairs(teamRows) do
     local team=list[i]
@@ -368,6 +598,16 @@ function FT:Draw()
   local own=FT.profiles[me()]
   mainRoleButton:SetText("Main: "..(own and own.main or "choose"))
   offRoleButton:SetText("Off: "..(own and own.off or "None"))
+end
+function FT:Draw()
+  if not panel:IsShown() then return end
+  if currentPage == "attunements" then
+    drawAttunements()
+  elseif currentPage == "quests" then
+    drawQuests()
+  else
+    drawTeams()
+  end
 end
 SLASH_FOREVERTEAMS1 = "/teams"
 SLASH_FOREVERTEAMS2 = "/exin"

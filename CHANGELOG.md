@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.0 — 2026-09-26
+
+### Added
+
+- Attunements tab with per-raid team readiness sorted by Missing, In progress, No report, and Complete.
+- Automatic self-checks against quest completion and key items, plus compact guild-message synchronization so each participating character reports its own status.
+- Launch raid entries for Barrow Deeps, Hyjal Summit, and Onyxia's Lair; unpublished custom requirements are explicitly marked instead of guessed.
+- Reference entries for the known Classic Molten Core, Blackwing Lair, and Naxxramas requirements, labeled later/unconfirmed for Forever.
+- Dungeon quests tab with all 66 quests currently exposed across 10 Forever beta dungeons, pickup directions, restrictions, paging, and live completion/quest-log status.
+- Pending-data entries for seven announced Forever dungeons whose quest IDs are not yet public.
+
+### Changed
+
+- Expanded the dashboard to three pages while retaining all existing team-management features.
+- Added `Data.lua` so raid and dungeon progress definitions can be updated independently from synchronization and UI code.
+
+### Known limitations
+
+- WoW exposes quest completion only for the current character. Each team member must log in with EXIN Teams 0.2.0 to provide their own attunement report.
+- Forever beta quest and raid requirements can change; the included dataset reflects build 1.60.1.70009.
+
 ## 0.1.0 — 2026-09-26
 
 Initial public beta of **EXIN Teams** for the Ex Inferno guild.

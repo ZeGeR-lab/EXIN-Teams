@@ -9,6 +9,7 @@ FT.events = {}
 FT.profiles = {}
 FT.professions = {}
 FT.playerInfo = {}
+FT.attunements = {}
 FT.selected = nil
 FT.colors = {
   {name="Pink", hex="ff83b7"}, {name="Purple", hex="aa89ff"},
@@ -67,6 +68,7 @@ local function save()
     FT.db.invitations = FT.invitations
     FT.db.professions = FT.professions
     FT.db.playerInfo = FT.playerInfo
+    FT.db.attunements = FT.attunements
   end
 end
 local function clearPending(id, who)
@@ -86,6 +88,17 @@ local function validWhen(s)
     tonumber(day) >= 1 and tonumber(day) <= 31 and tonumber(hour) <= 23 and tonumber(minute) <= 59
 end
 local function apply(op, f, actor)
+  if op == "ATTUNE" then
+    local version = tonumber(f[3])
+    local count = FT.attunementData and #FT.attunementData or 0
+    if f[2] ~= actor or version ~= (FT.progressVersion or 1) or
+      type(f[4]) ~= "string" or #f[4] ~= count or not f[4]:match("^[CPMU]+$") or
+      (f[5] ~= "Alliance" and f[5] ~= "Horde" and f[5] ~= "Neutral") then return end
+    FT.attunements[actor] = {version=version, states=f[4], faction=f[5], updated=time()}
+    save()
+    FT:Refresh()
+    return
+  end
   if op == "PROFILE" then
     if f[2] ~= actor or not role(f[3]) or not role(f[4], true) then return end
     FT.profiles[actor] = { main = f[3], off = f[4] }
@@ -195,6 +208,10 @@ function FT:Act(op, ...)
 end
 local function syncTeams()
   if not myGuild() then return end
+  local readiness = FT.attunements[selfName()]
+  if readiness then
+    send("ATTUNE", selfName(), tostring(readiness.version), readiness.states, readiness.faction)
+  end
   local own = FT.profiles[selfName()]
   if own then send("PROFILE", selfName(), own.main, own.off) end
   local trades = FT.professions[selfName()]
@@ -253,6 +270,8 @@ function FT:OpenGuild()
   self.professions = self.db.professions
   self.db.playerInfo = self.db.playerInfo or {}
   self.playerInfo = self.db.playerInfo
+  self.db.attunements = self.db.attunements or {}
+  self.attunements = self.db.attunements
   self.db.requests = self.db.requests or {}
   self.db.invitations = self.db.invitations or {}
   self.requests = self.db.requests
@@ -289,17 +308,112 @@ function FT:UpdateProfessions()
     old[2].name==name2 and old[2].rank==tonumber(rank2) then return end
   self:Act("PROF", selfName(), name1, rank1, name2, rank2)
 end
+local activeQuests = {}
+function FT:RefreshQuestCache()
+  wipe(activeQuests)
+  local total = 0
+  if C_QuestLog and C_QuestLog.GetNumQuestLogEntries then
+    total = C_QuestLog.GetNumQuestLogEntries() or 0
+  elseif GetNumQuestLogEntries then
+    total = GetNumQuestLogEntries() or 0
+  end
+  for index = 1, total do
+    local questID
+    if C_QuestLog and C_QuestLog.GetInfo then
+      local info = C_QuestLog.GetInfo(index)
+      questID = info and not info.isHeader and info.questID
+    elseif GetQuestLogTitle then
+      local _, _, _, isHeader, _, _, _, id = GetQuestLogTitle(index)
+      if not isHeader then questID = id end
+    end
+    if questID then activeQuests[questID] = true end
+  end
+end
+function FT:IsQuestComplete(questID)
+  if not questID then return false end
+  if C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted then
+    return C_QuestLog.IsQuestFlaggedCompleted(questID) and true or false
+  elseif IsQuestFlaggedCompleted then
+    return IsQuestFlaggedCompleted(questID) and true or false
+  end
+  return false
+end
+function FT:IsQuestActive(questID)
+  if not questID then return false end
+  if C_QuestLog and C_QuestLog.IsOnQuest then
+    return C_QuestLog.IsOnQuest(questID) and true or false
+  end
+  return activeQuests[questID] and true or false
+end
+local function questIDs(entry, field)
+  if entry[field] then return entry[field] end
+  return entry.id and {entry.id} or {}
+end
+function FT:QuestState(entry)
+  local faction = UnitFactionGroup("player") or "Neutral"
+  local class = select(2, UnitClass("player"))
+  if entry.side and entry.side ~= faction then return "X" end
+  if entry.class and entry.class ~= class then return "X" end
+  for _, questID in ipairs(questIDs(entry, "completeIDs")) do
+    if self:IsQuestComplete(questID) then return "C" end
+  end
+  for _, questID in ipairs(questIDs(entry, "activeIDs")) do
+    if self:IsQuestActive(questID) then return "P" end
+  end
+  return "M"
+end
+local function raidState(entry)
+  if not entry.published then return "U" end
+  if entry.itemID and GetItemCount and GetItemCount(entry.itemID, true) > 0 then return "C" end
+  for _, questID in ipairs(entry.completeIDs or {}) do
+    if FT:IsQuestComplete(questID) then return "C" end
+  end
+  for _, questID in ipairs(entry.activeIDs or entry.completeIDs or {}) do
+    if FT:IsQuestActive(questID) then return "P" end
+  end
+  return "M"
+end
+function FT:UpdateAttunements(force)
+  if not self.db or not self.attunementData then return end
+  self:RefreshQuestCache()
+  local states = {}
+  for _, entry in ipairs(self.attunementData) do table.insert(states, raidState(entry)) end
+  local stateText = table.concat(states)
+  local faction = UnitFactionGroup("player") or "Neutral"
+  local who = selfName()
+  local old = self.attunements[who]
+  local changed = not old or old.version ~= (self.progressVersion or 1) or
+    old.states ~= stateText or old.faction ~= faction
+  self.attunements[who] = {version=self.progressVersion or 1, states=stateText, faction=faction, updated=time()}
+  save()
+  if changed or force then
+    send("ATTUNE", who, tostring(self.progressVersion or 1), stateText, faction)
+  end
+  self:Refresh()
+end
+local progressQueued
+local function queueProgressUpdate(force)
+  if progressQueued then return end
+  progressQueued = true
+  C_Timer.After(0.75, function()
+    progressQueued = nil
+    FT:UpdateAttunements(force)
+  end)
+end
 frame:RegisterEvent("PLAYER_LOGIN")
 frame:RegisterEvent("PLAYER_GUILD_UPDATE")
 frame:RegisterEvent("GUILD_ROSTER_UPDATE")
 frame:RegisterEvent("CHAT_MSG_ADDON")
 frame:RegisterEvent("SKILL_LINES_CHANGED")
+frame:RegisterEvent("QUEST_LOG_UPDATE")
+frame:RegisterEvent("BAG_UPDATE_DELAYED")
 frame:SetScript("OnEvent", function(_, event, ...)
   if event == "PLAYER_LOGIN" then
     local ok = C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix and C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
     if not ok and RegisterAddonMessagePrefix then RegisterAddonMessagePrefix(PREFIX) end
     FT:OpenGuild()
     C_Timer.After(2, function() FT:UpdateProfessions() end)
+    C_Timer.After(2.5, function() FT:UpdateAttunements(true) end)
     C_Timer.After(4, function()
       send("HELLO", selfName())
       local own = FT.profiles[selfName()]
@@ -307,6 +421,8 @@ frame:SetScript("OnEvent", function(_, event, ...)
     end)
   elseif event == "SKILL_LINES_CHANGED" then
     C_Timer.After(0.5, function() FT:UpdateProfessions() end)
+  elseif event == "QUEST_LOG_UPDATE" or event == "BAG_UPDATE_DELAYED" then
+    queueProgressUpdate(false)
   elseif event == "PLAYER_GUILD_UPDATE" then FT:OpenGuild()
   elseif event == "GUILD_ROSTER_UPDATE" then rosterRefresh()
   elseif event == "CHAT_MSG_ADDON" then
