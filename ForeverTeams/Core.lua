@@ -131,17 +131,37 @@ function FT:RecordActivity(team, description)
   while #team.activity > 80 do table.remove(team.activity) end
 end
 function FT:Member(team, who) return team and team.members[norm(who)] end
+local function officerRank(rank, rankID)
+  local index=tonumber(rankID)
+  if index and index<=1 then return true end
+  -- Some Forever guild rank layouts put an explicitly named officer rank
+  -- below index 1. These names come from the game, never from member notes.
+  local name=type(rank)=="string" and trim(rank):lower() or ""
+  return name=="guild master" or name=="guildmaster" or name=="guild leader" or
+    name=="officer" or name=="guild officer"
+end
 function FT:IsGuildOfficer(who)
-  local member=self.roster[norm(who)]
-  if not member then return false end
+  local name=norm(who)
+  if not myGuild() then return false end
+  local member=self.roster[name]
   -- Temporary developer override: the authenticated guild character name only.
   -- Guild notes and Discord names must never grant administrator access.
-  if norm(who) == "snoop-warg" and myGuild() == "Ex Inferno" then return true end
-  return type(member.rankID)=="number" and member.rankID <= 1
+  if name==selfName() then
+    if name=="snoop-warg" and myGuild()=="Ex Inferno" then return true end
+    -- GetGuildInfo works before the full roster is populated. Only use it
+    -- for the logged-in character; remote users must match a roster entry.
+    local guild,rank,index=GetGuildInfo("player")
+    if guild==myGuild() and officerRank(rank,index) then return true end
+  end
+  return member and officerRank(member.rank,member.rankID) or false
 end
 function FT:IsGuildLeader(who)
+  if norm(who)==selfName() and myGuild() then
+    local guild,_,index=GetGuildInfo("player")
+    if guild==myGuild() and tonumber(index)==0 then return true end
+  end
   local member=self.roster[norm(who)]
-  return member and member.rankID == 0
+  return member and tonumber(member.rankID)==0 or false
 end
 function FT:IsTeamLeader(who)
   local member=self.roster[norm(who)]

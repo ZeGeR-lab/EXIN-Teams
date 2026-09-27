@@ -808,6 +808,17 @@ end
 SLASH_FOREVERTEAMS1 = "/teams"
 SLASH_FOREVERTEAMS2 = "/exin"
 SlashCmdList.FOREVERTEAMS = function(command)
+  if command and command:lower():match("^%s*rankcheck%s*$") then
+    local own=FT:SelfName()
+    local guildName,rank,index=GetGuildInfo("player")
+    local entry=FT.roster[own]
+    FT:Notice("Rank check: guild="..tostring(guildName).."; character="..own..
+      "; game rank="..tostring(rank).." (#"..tostring(index)..")"..
+      "; roster rank="..tostring(entry and entry.rank or "not loaded")..
+      " (#"..tostring(entry and entry.rankID or "not loaded")..")"..
+      "; admin="..tostring(FT:IsGuildOfficer(own)))
+    return
+  end
   if command and command:lower():match("^%s*namecheck%s*$") then
     local own=FT:SelfName()
     local guild=FT.roster[own]

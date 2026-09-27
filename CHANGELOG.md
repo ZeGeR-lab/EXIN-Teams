@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.3 — 2026-09-27
+
+- Fixed guild master administration when the guild roster has not finished loading. The logged-in character's game-provided guild rank now supplies permissions immediately.
+- Recognize game-provided Guild Master, Guild Leader, and Officer rank names, including officer ranks placed below guild rank index 1. Team Leaders still manage only their own teams.
+- Added `/exin rankcheck` to display the game's rank, roster rank, and current admin permission for troubleshooting.
+
 ## 0.4.2 — 2026-09-27
 
 - Styled the calendar, event editor, attendance list, and raid planner with the existing EXIN Teams dark cards, green accent bars, and panel borders.
