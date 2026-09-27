@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2 — 2026-09-27
+
+- Styled the calendar, event editor, attendance list, and raid planner with the existing EXIN Teams dark cards, green accent bars, and panel borders.
+- Added selected-day, selected-view, and selected-event highlights; adjusted calendar spacing so event pagination and details fit their sections.
+
 ## 0.4.1 — 2026-09-27
 
 - Fixed calendar dialogs drawing behind date buttons and other calendar controls. Opening the event editor, attendance list, or raid planner now shows one panel above the calendar.

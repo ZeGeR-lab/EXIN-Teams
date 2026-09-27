@@ -23,13 +23,44 @@ local function wrap(parent,w,h)
   f:SetSize(w,h); f:SetPoint("CENTER"); f:SetFrameStrata("FULLSCREEN_DIALOG")
   f:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",edgeFile="Interface\\DialogFrame\\UI-DialogBox-Border",edgeSize=24,
     insets={left=8,right=8,top=8,bottom=8}})
-  f:SetBackdropColor(0.035,0.045,0.06,0.98); f:Hide()
+  f:SetBackdropColor(0.035,0.045,0.06,0.98)
+  f:SetBackdropBorderColor(0.34,0.45,0.25,1)
+  f:Hide()
   return f
+end
+local function card(parent,x,y,w,h)
+  local border=parent:CreateTexture(nil,"BACKGROUND")
+  border:SetTexture("Interface\\Buttons\\WHITE8X8")
+  border:SetPoint("TOPLEFT",x,y); border:SetSize(w,h)
+  border:SetVertexColor(0.20,0.26,0.22,0.95)
+  local fill=parent:CreateTexture(nil,"BACKGROUND",nil,1)
+  fill:SetTexture("Interface\\Buttons\\WHITE8X8")
+  fill:SetPoint("TOPLEFT",x+1,y-1); fill:SetSize(w-2,h-2)
+  fill:SetVertexColor(0.08,0.10,0.13,0.96)
+  return fill
+end
+local function accent(parent,x,y,w)
+  local bar=parent:CreateTexture(nil,"BACKGROUND",nil,2)
+  bar:SetTexture("Interface\\Buttons\\WHITE8X8")
+  bar:SetPoint("TOPLEFT",x,y); bar:SetSize(w,3)
+  bar:SetVertexColor(0.61,0.86,0.25,1)
 end
 local calendar=wrap(UIParent,790,620)
 local editor=wrap(calendar,480,245)
 local planner=wrap(calendar,580,610)
 local attendancePanel=wrap(calendar,490,520)
+card(calendar,12,-40,495,437)
+card(calendar,512,-40,266,437)
+card(calendar,12,-483,766,119)
+accent(calendar,13,-41,493)
+accent(calendar,513,-41,264)
+accent(calendar,13,-484,764)
+card(editor,14,-42,452,158)
+accent(editor,15,-43,450)
+card(attendancePanel,14,-48,462,408)
+accent(attendancePanel,15,-49,460)
+card(planner,14,-48,552,473)
+accent(planner,15,-49,550)
 -- Calendar buttons are created after these panels. Give dialogs an explicit
 -- higher level so newly created day buttons never draw through a dialog.
 for _,panel in ipairs({editor,planner,attendancePanel}) do
@@ -49,6 +80,7 @@ local mode="personal"
 local selected=nil
 local teamID=nil
 local eventPage=1
+local modeTabs={}
 local function team()
   if teamID and FT.teams[teamID] then return FT.teams[teamID] end
   if FT.selected and FT.teams[FT.selected] then return FT.teams[FT.selected] end
@@ -91,7 +123,9 @@ local function entries()
 end
 local header=label(calendar,20,-21,580)
 header:SetFontObject(GameFontNormalLarge)
-local sub=label(calendar,20,-47,670)
+local sub=label(calendar,22,-501,750)
+local eventHeading=label(calendar,525,-107,245)
+eventHeading:SetText("|cff9bdd00EVENTS ON SELECTED DAY|r")
 local dayHeader={"Sun","Mon","Tue","Wed","Thu","Fri","Sat"}
 for i,name in ipairs(dayHeader) do label(calendar,20+(i-1)*69,-106,65):SetText(name) end
 local dayButtons={}
@@ -105,15 +139,15 @@ for index=1,42 do
   dayButtons[index]:SetHeight(52)
 end
 local eventRows={}
-for i=1,7 do
+for i=1,6 do
   eventRows[i]=button(calendar,"",520,-130-(i-1)*47,248,function(self)
     selected=self.entry
     if selected then render() end
   end)
   eventRows[i]:SetHeight(42)
 end
-local detail=label(calendar,520,-480,250)
-detail:SetHeight(48)
+local detail=label(calendar,520,-519,250)
+detail:SetHeight(29)
 local pageText=label(calendar,601,-459,65)
 local rsvpYes,rsvpNo,inviteButton,inviteBox,deleteButton,raidButton,raid20,raid40,guildCreateButton,attendanceButton
 local function dateLabel(d)
@@ -128,6 +162,9 @@ render=function()
   sub:SetText((mode=="personal" and "Personal calendar" or mode=="guild" and "Guild calendar" or
     "Team calendar: "..(group and group.name or "Select a team on the Teams tab"))..
     "  |cff8b9b8b• Calendar times use your client's local time|r")
+  for name,tab in pairs(modeTabs) do
+    if name==mode then tab:LockHighlight() else tab:UnlockHighlight() end
+  end
   local first=time({year=year,month=month,day=1,hour=12})
   local offset=tonumber(date("%w",first))
   local days=tonumber(date("%d",time({year=year,month=month+1,day=0,hour=12})))
@@ -142,6 +179,9 @@ render=function()
       for _, entry in ipairs(all) do if entry.event.when:sub(1,10)==stamp then count=count+1 end end
       b:SetText((stamp==day and "|cff9bdd00["..n.."]|r" or tostring(n))..
         (count>0 and "\n|cffffcc55"..count.." event"..(count==1 and "" or "s").."|r" or ""))
+      if stamp==day then b:LockHighlight() else b:UnlockHighlight() end
+    else
+      b:UnlockHighlight()
     end
   end
   local shown={}
@@ -153,6 +193,7 @@ render=function()
     local entry=shown[(eventPage-1)*#eventRows+i]
     b.entry=entry
     b:SetShown(entry~=nil)
+    if entry and selected and entry.event==selected.event then b:LockHighlight() else b:UnlockHighlight() end
     if entry then
       local event=entry.event
       b:SetText("|cff"..(entry.team and FT:Color(entry.team.color).hex or "9bdd00")..event.when:sub(12).."|r  "..
@@ -201,9 +242,9 @@ button(calendar,">",620,-17,32,function()
   day=string.format("%04d-%02d-01",year,month); selected=nil; render()
 end)
 button(calendar,"Close",690,-17,80,function() calendar:Hide(); editor:Hide(); planner:Hide(); attendancePanel:Hide() end)
-button(calendar,"Personal",20,-75,100,function() mode="personal"; selected=nil; eventPage=1; render() end)
-button(calendar,"Team",125,-75,100,function() mode="team"; selected=nil; eventPage=1; render() end)
-button(calendar,"Guild",230,-75,95,function() mode="guild"; selected=nil; eventPage=1; render() end)
+modeTabs.personal=button(calendar,"Personal",20,-75,100,function() mode="personal"; selected=nil; eventPage=1; render() end)
+modeTabs.team=button(calendar,"Team",125,-75,100,function() mode="team"; selected=nil; eventPage=1; render() end)
+modeTabs.guild=button(calendar,"Guild",230,-75,95,function() mode="guild"; selected=nil; eventPage=1; render() end)
 button(calendar,"Previous",520,-447,75,function() if eventPage>1 then eventPage=eventPage-1; selected=nil; render() end end)
 button(calendar,"Next",665,-447,75,function() eventPage=eventPage+1; selected=nil; render() end)
 rsvpYes=button(calendar,"Yes, going",520,-545,105,function()
