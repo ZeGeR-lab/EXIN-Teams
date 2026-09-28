@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.2 — 2026-09-28
+
+- Guild-note import now detects an existing team by normalized name (including `Team Blue` versus `Blue`) or color before creating a note team.
+- When an older note-generated team duplicates a manually created team, keep the manual team and migrate the duplicate's roster, events, invitations, and applications into it. Remember the removed note team so later sync cannot bring it back.
+
+## 0.5.1 — 2026-09-28
+
+- Added a compact minimap button using the supplied EXIN symbol. Click to open or close EXIN Teams; drag around the minimap to move it. Its position is saved between sessions.
+- Included the icon as a 64×64 game-compatible TGA inside the addon folder.
+
+## 0.5.0 — 2026-09-27
+
+- Automatically create teams from valid public guild notes formatted `Team - Discord name`, including teams no addon user has created yet. Match each note to one existing team by name or color and keep its roster current as notes change. Team Leaders whose notes match their team become its initial leaders; otherwise an available guild officer is chosen as steward.
+- Add an officer-only Transfer button for assigning team leadership to another guild character. The new leader may manage that team without joining its active roster; their delegated rights are synchronized by guild officers.
+- Show a leader's displayed guild character name on the team page. Keep deleted note-derived teams deleted until an officer creates a new team deliberately.
+
 ## 0.4.4 — 2026-09-27
 
 - Display the installed addon version in the bottom-right corner of the team and calendar windows.
