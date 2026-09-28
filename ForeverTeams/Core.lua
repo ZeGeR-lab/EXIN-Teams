@@ -2,7 +2,7 @@ local ADDON, FT = ...
 _G.ForeverTeams = FT
 FT.version = 1
 local addonMetadata=C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
-FT.versionString=(addonMetadata and addonMetadata(ADDON,"Version")) or "0.5.5"
+FT.versionString=(addonMetadata and addonMetadata(ADDON,"Version")) or "0.5.6"
 FT.teams = {}
 FT.roster = {}
 FT.invitations = {}
@@ -181,6 +181,16 @@ local function rosterRefresh()
           if not canonical.members[who] then canonical.members[who]=role end
         end
         for who in pairs(duplicate.noteMembers or {}) do canonical.noteMembers[who]=true end
+        canonical.activity=canonical.activity or {}
+        for _, record in ipairs(duplicate.activity or {}) do
+          local found=false
+          for _, existing in ipairs(canonical.activity) do
+            if existing.at==record.at and existing.text==record.text then found=true; break end
+          end
+          if not found then table.insert(canonical.activity,record) end
+        end
+        table.sort(canonical.activity,function(a,b) return (a.at or 0)>(b.at or 0) end)
+        while #canonical.activity>80 do table.remove(canonical.activity) end
         canonical.events=canonical.events or {}
         local eventIDs={}
         for _, event in ipairs(canonical.events) do eventIDs[event.id]=true end
@@ -239,7 +249,7 @@ end
 function FT:Refresh() if self.Draw then self:Draw() end end
 function FT:Notice(s) print("|cff9bdd00EXIN Teams:|r " .. s) end
 function FT:RecordActivity(team, description)
-  if not team or not self:CanSeeDetails(team, selfName()) then return end
+  if not team then return end
   team.activity=team.activity or {}
   table.insert(team.activity, 1, {at=time(), text=description})
   while #team.activity > 80 do table.remove(team.activity) end
@@ -504,14 +514,42 @@ local function apply(op, f, actor)
     return
   end
   local id, team = f[2], FT.teams[f[2]]
+  if op == "LOG" then
+    if not team or actor~=team.owner or not FT:CanManage(team,actor) or
+      not valid(f[3],20) or not tonumber(f[3]) or not valid(f[4],150) then return end
+    local stamp=tonumber(f[3])
+    if stamp<time()-2592000 or stamp>time()+300 then return end
+    team.activity=team.activity or {}
+    for _, old in ipairs(team.activity) do
+      if old.text==f[4] and math.abs((old.at or 0)-stamp)<30 then return end
+    end
+    table.insert(team.activity,{at=stamp,text=f[4]})
+    table.sort(team.activity,function(a,b) return (a.at or 0)>(b.at or 0) end)
+    while #team.activity>80 do table.remove(team.activity) end
+    save(); FT:Refresh(); return
+  end
   if op == "NEW" then
     if not valid(id, 48) or not valid(f[3], 24) or not valid(f[4], 48) or not valid(f[5], 70) then return end
     if f[6] ~= actor or team or not FT:CanOwnTeam(actor, f[3], FT:Color(f[7]).name) or FT.deleted[id] then return end
+    -- A public guild note may already have created this team under a note- ID.
+    -- When the real owner syncs in, the manually established ID wins so later
+    -- invites and roster packets address the same team on every client.
+    local function key(value)
+      return trim(value):lower():gsub("^team%s+",""):gsub("%s+"," ")
+    end
+    local incoming=key(f[3])
+    for otherID,other in pairs(FT.teams) do
+      if otherID~=id and not other.fromNotes and key(other.name)==incoming then
+        if actor==selfName() then FT:Notice("A team with that name already exists.") end
+        return
+      end
+    end
     FT.teams[id] = { id = id, name = f[3], focus = f[4], motd = f[5], owner = actor,
       color = FT:Color(f[7]).name,
       members = {}, ownerParticipates=false, events = {}, fromNotes=id:sub(1,5)=="note-" }
     save()
     rosterRefresh()
+    if FT.teams[id] then FT:RecordActivity(FT.teams[id],display(actor).." created the team") end
   elseif op == "DEL" and team and FT:CanDelete(team, actor) then
     FT.deleted[id]={owner=team.owner, by=actor}
     FT.teams[id]=nil
@@ -536,9 +574,20 @@ local function apply(op, f, actor)
     FT.requests[id] = FT.requests[id] or {}
     FT.requests[id][actor] = {availability=f[4] or "Not provided", interest=f[5] or "Not provided"}
     save()
-  elseif op == "INVITE" and FT:CanManage(team, actor) and FT.roster[norm(f[3])] then
+  elseif op == "INVITE" and FT:CanManage(team, actor) and FT.roster[norm(f[3])] and not team.members[norm(f[3])] then
     FT.invitations[id] = FT.invitations[id] or {}
-    FT.invitations[id][norm(f[3])] = true
+    local invited=norm(f[3])
+    local wasPending=FT.invitations[id][invited]
+    FT.invitations[id][invited] = true
+    if not wasPending then FT:RecordActivity(team,display(actor).." invited "..display(invited)) end
+    if actor==selfName() and FT.roster[invited].online then
+      emit("WHISPER",invited,"INVITE_NOTICE",id)
+      -- A normal whisper reaches guildmates who have not installed the addon.
+      if not wasPending and SendChatMessage then
+        pcall(SendChatMessage,"You are invited to "..team.name.." in EXIN Teams. Type /exin and click Join invite, or reply to me if you do not have the addon.",
+          "WHISPER",nil,FT.roster[invited].name)
+      end
+    end
     save()
   elseif op == "JOIN" and actor == f[3] and FT.invitations[id] and FT.invitations[id][actor] and not team.members[actor] then
     team.members[actor] = "member"
@@ -668,6 +717,8 @@ function FT:Act(op, ...)
   local fields = {op, ...}
   for _, value in ipairs(fields) do if not valid(value, 150) then self:Notice("That entry is too long or contains an unsupported character."); return end end
   apply(op, fields, selfName())
+  -- Do not broadcast a rejected duplicate or invalid local creation.
+  if op=="NEW" and not self.teams[fields[2]] then return end
   if op == "PROF" or op == "PREF" or op == "PROFILE" or op == "ATTUNE" then sendPrivate(op, ...)
   elseif op == "APPLY" then send(op, fields[2], selfName())
   else send(op, ...) end
@@ -715,6 +766,11 @@ local function syncTeams()
     if team.owner == selfName() then
       local packets = {{"NEW", id, team.name, team.focus, team.motd, team.owner, FT:Color(team.color).name},
         {"SYNC", id, team.name, team.focus, team.motd, FT:Color(team.color).name}}
+      for index, record in ipairs(team.activity or {}) do
+        if index<=30 and record.at and record.text and #record.text<=150 then
+          table.insert(packets,{"LOG",id,tostring(record.at),record.text})
+        end
+      end
       for who, role in pairs(team.members) do
         table.insert(packets, {"ROSTER", id, who, role})
       end
@@ -754,7 +810,12 @@ local function syncTeams()
     end
     if FT:CanManage(team, selfName()) and FT.invitations[id] then
       for who in pairs(FT.invitations[id]) do
-        if not team.members[who] then table.insert(pendingPackets, {"INVITE", id, who}) end
+        if not team.members[who] then
+          table.insert(pendingPackets, {"INVITE", id, who})
+          if who~=selfName() and FT.roster[who] and FT.roster[who].online then
+            emit("WHISPER",who,"INVITE_NOTICE",id)
+          end
+        end
       end
     end
   end
@@ -987,6 +1048,23 @@ frame:SetScript("OnEvent", function(_, event, ...)
     if FT.peers then FT.peers[actor]=true end
     local fields = {}
     for part in (message .. "|"):gmatch("(.-)|") do table.insert(fields, part) end
+    if fields[1] == "INVITE_NOTICE" then
+      if channel~="WHISPER" or not valid(fields[2],48) then return end
+      local team=FT.teams[fields[2]]
+      if team and FT:CanManage(team,actor) and not team.members[selfName()] then
+        FT.invitations[team.id]=FT.invitations[team.id] or {}
+        local first=not FT.invitations[team.id][selfName()]
+        FT.invitations[team.id][selfName()]=true
+        save(); FT:Refresh()
+        if first then FT:Notice(display(actor).." invited you to "..team.name..". Open EXIN Teams, select the team, and click Join invite.") end
+      elseif not team then
+        -- The private invite can arrive before the guild NEW packet.
+        FT.pendingInvites=FT.pendingInvites or {}
+        FT.pendingInvites[fields[2]]=actor
+        emit("WHISPER",actor,"HELLO",selfName())
+      end
+      return
+    end
     if fields[1] == "PERSONAL" then
       if channel~="WHISPER" or not valid(fields[2],80) or fields[2]:sub(1,#actor+1)~=actor.."-" or
         not validWhen(fields[3]) or not valid(fields[4],70) or
@@ -1023,7 +1101,7 @@ frame:SetScript("OnEvent", function(_, event, ...)
           FT:CanSeeDetails(team, selfName()) then allowed=true; break end
       end
       if not allowed then return end
-    elseif channel ~= "GUILD" then return end
+    elseif channel ~= "GUILD" and not (channel=="WHISPER" and fields[1]=="HELLO") then return end
     if fields[1] == "HELLO" then
       emit("WHISPER",actor,"PONG")
       syncTeams()
@@ -1031,5 +1109,16 @@ frame:SetScript("OnEvent", function(_, event, ...)
     end
     if fields[1] == "PONG" then return end
     apply(fields[1], fields, actor)
+    if fields[1]=="NEW" and FT.pendingInvites and FT.pendingInvites[fields[2]] then
+      local inviter=FT.pendingInvites[fields[2]]
+      FT.pendingInvites[fields[2]]=nil
+      local created=FT.teams[fields[2]]
+      if created and FT:CanManage(created,inviter) then
+        FT.invitations[created.id]=FT.invitations[created.id] or {}
+        FT.invitations[created.id][selfName()]=true
+        FT:Notice(display(inviter).." invited you to "..created.name..". Select it and click Join invite.")
+        save(); FT:Refresh()
+      end
+    end
   end
 end)

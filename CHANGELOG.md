@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.6 — 2026-09-28
+
+- Add an All activity tab with a chronological, paginated view of public team changes and team events across the guild, including other teams. Team owners replay recent activity to reconnecting clients.
+- Notify invited players directly in the addon and by regular whisper; ask an inviter for missing team data when the private notice arrives before the team sync. Repeat pending addon notices when an invited player reconnects.
+- Prefer an established team over a provisional note-created team when new team data arrives, merge its activity into the established team, and block duplicate local team creation by name.
+
 ## 0.5.5 — 2026-09-28
 
 - Reduce the EXIN minimap button from 32 to 24 pixels to match the smaller neighboring minimap icon while keeping its saved rim position.

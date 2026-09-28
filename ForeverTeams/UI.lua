@@ -19,6 +19,8 @@ local attunementPage = CreateFrame("Frame", nil, panel)
 attunementPage:SetAllPoints(panel)
 local questPageFrame = CreateFrame("Frame", nil, panel)
 questPageFrame:SetAllPoints(panel)
+local guildActivityPage = CreateFrame("Frame",nil,panel)
+guildActivityPage:SetAllPoints(panel)
 local function card(parent, x, y, width, height)
   local border = parent:CreateTexture(nil, "BACKGROUND")
   border:SetTexture("Interface\\Buttons\\WHITE8X8")
@@ -79,7 +81,8 @@ local function rankCheck()
 end
 button(panel,"Rank check",20,-584,100,rankCheck)
 local currentPage = "teams"
-local pageFrames = {teams=teamPage, attunements=attunementPage, quests=questPageFrame}
+local drawGuildActivity
+local pageFrames = {teams=teamPage, attunements=attunementPage, quests=questPageFrame,activity=guildActivityPage}
 local pageButtons = {}
 local function selectPage(name)
   currentPage = name
@@ -95,11 +98,13 @@ local calendarTab=button(panel,"Calendar",290,-12,85,function()
 end)
 pageButtons.attunements = button(panel, "Attunements", 380, -12, 100, function() selectPage("attunements") end)
 pageButtons.quests = button(panel, "Dungeon quests", 485, -12, 105, function() selectPage("quests") end)
+pageButtons.activity = button(panel,"All activity",595,-12,100,function() selectPage("activity") end)
 calendarTab:SetFrameLevel(panel:GetFrameLevel()+10)
 for _, tab in pairs(pageButtons) do tab:SetFrameLevel(panel:GetFrameLevel()+10) end
 pageButtons.teams:LockHighlight()
 attunementPage:Hide()
 questPageFrame:Hide()
+guildActivityPage:Hide()
 local recruitment=CreateFrame("Frame",nil,UIParent,"BackdropTemplate")
 recruitment:SetSize(500,265)
 recruitment:SetPoint("CENTER")
@@ -351,6 +356,49 @@ for i=1,3 do
 end
 local eventTitle = line(teamPage, 210, -475, 365)
 eventTitle:SetText("|cff9bdd00TEAM EVENTS|r  |cff8b9b8bserver time|r")
+card(guildActivityPage,20,-52,738,512)
+local allActivityTitle=line(guildActivityPage,36,-66,680)
+allActivityTitle:SetText("|cff9bdd00GUILD TEAM ACTIVITY|r  |cff8b9b8bUpdates from all visible teams|r")
+local allActivityInfo=line(guildActivityPage,36,-96,685,"small")
+allActivityInfo:SetText("Team changes and calendar events appear here. Member details remain restricted.")
+local allActivityRows={}
+for i=1,16 do
+  local row=line(guildActivityPage,36,-128-(i-1)*25,700,"small")
+  row:SetHeight(24)
+  allActivityRows[i]=row
+end
+local allActivityIndex=1
+local allActivityPages=line(guildActivityPage,349,-540,110,"small")
+drawGuildActivity=function()
+  local all={}
+  for _,team in pairs(FT.teams) do
+    for _,record in ipairs(team.activity or {}) do
+      if type(record)=="table" and type(record.text)=="string" then
+        table.insert(all,{at=record.at or 0,text=record.text,name=team.name or "Team",color=team.color})
+      end
+    end
+  end
+  table.sort(all,function(a,b)
+    if a.at~=b.at then return a.at>b.at end
+    if a.name~=b.name then return a.name<b.name end
+    return a.text<b.text
+  end)
+  local pages=math.max(1,math.ceil(#all/#allActivityRows))
+  allActivityIndex=math.min(allActivityIndex,pages)
+  allActivityPages:SetText(allActivityIndex.." / "..pages)
+  for i,row in ipairs(allActivityRows) do
+    local entry=all[(allActivityIndex-1)*#allActivityRows+i]
+    row:SetText(entry and ("|cff8b9b8b"..date("%m/%d %H:%M",entry.at).."|r  |cff"..
+      FT:Color(entry.color).hex..entry.name.."|r  "..entry.text) or
+      (#all==0 and i==1 and "No team activity has been recorded yet." or ""))
+  end
+end
+button(guildActivityPage,"Previous",36,-531,92,function()
+  if allActivityIndex>1 then allActivityIndex=allActivityIndex-1; drawGuildActivity() end
+end)
+button(guildActivityPage,"Next",625,-531,90,function()
+  allActivityIndex=allActivityIndex+1; drawGuildActivity()
+end)
 local activityPanel=CreateFrame("Frame",nil,UIParent,"BackdropTemplate")
 activityPanel:SetSize(610,420)
 activityPanel:SetPoint("CENTER")
@@ -443,7 +491,12 @@ control("Invite",430,-135,60,function()
   local team=chosen(); if not team or not FT:CanManage(team,me()) then return end
   ask("Guild member to invite", "", function(name)
     local who=name:lower():gsub("%s+", "-")
-    if FT.roster[who] then FT:Act("INVITE",team.id,who) else FT:Notice("That character is not in the loaded guild roster.") end
+    if not FT.roster[who] then FT:Notice("That character is not in the loaded guild roster.")
+    elseif team.members[who] then FT:Notice("That character is already on this team's roster (possibly from their guild note).")
+    else
+      FT:Act("INVITE",team.id,who)
+      FT:Notice("Invite sent to "..FT.roster[who].name..". Online players also receive a whisper.")
+    end
   end)
 end)
 control("Add",495,-135,66,function()
@@ -829,7 +882,9 @@ end
 function FT:Draw()
   if activityPanel:IsShown() then drawActivity() end
   if not panel:IsShown() then return end
-  if currentPage == "attunements" then
+  if currentPage == "activity" then
+    drawGuildActivity()
+  elseif currentPage == "attunements" then
     drawAttunements()
   elseif currentPage == "quests" then
     drawQuests()

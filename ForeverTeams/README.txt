@@ -155,3 +155,9 @@ to nearby buttons. Your previous saved angle still applies.
 
 MINIMAP SIZE (0.5.5)
 The icon is now 24 pixels across to match the smaller neighboring button.
+
+ALL ACTIVITY AND INVITES (0.5.6)
+All activity in the top bar lists public team changes and event updates from
+every team. Private member profiles remain restricted. Inviting an online
+guildmate sends an addon notice and a normal whisper; they can select the team
+and click Join invite, or reply to the inviter if they lack the addon.
