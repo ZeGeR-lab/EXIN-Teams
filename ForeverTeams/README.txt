@@ -86,7 +86,8 @@ user reconnects, their pending applications and the invitations they manage
 are announced again to other online addon users.
 The Add button lets a manager add a guild member who does not run the addon.
 Guild public notes in the form "Team - DiscordName" (for example,
-"Black - Sicnus") assign that member to the matching team color or name.
+"Black - Sicnus") automatically create missing teams and assign the character
+to one matching team roster.
 The text after the dash is the player's Discord name and appears on the
 authorized team roster hover, helping identify their characters and alts.
 The note provides one primary team; additional memberships use the addon.
@@ -115,7 +116,9 @@ not change actual guild rank, actual guild membership, or calendar access.
 Use Recruitment at the top of the window to paste a guild recruitment text,
 save it locally, and post it to a joined Trade channel with one click. The
 button has a one-minute cooldown. It does not post automatically on a timer.
-Team ownership cannot currently transfer. Team structure uses GUILD addon
+Guild officers can click Transfer on a team and enter the next leader's full
+character name. The new leader can manage that team without joining its
+active roster. Team structure uses GUILD addon
 messages; personal roles, preferences, professions and attunement reports use
 targeted whispers. People who were offline learn of a team when its leader
 comes online and sends its data.

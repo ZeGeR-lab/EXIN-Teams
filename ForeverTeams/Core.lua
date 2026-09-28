@@ -2,7 +2,7 @@ local ADDON, FT = ...
 _G.ForeverTeams = FT
 FT.version = 1
 local addonMetadata=C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
-FT.versionString=(addonMetadata and addonMetadata(ADDON,"Version")) or "0.4.4"
+FT.versionString=(addonMetadata and addonMetadata(ADDON,"Version")) or "0.5.0"
 FT.teams = {}
 FT.roster = {}
 FT.invitations = {}
@@ -55,8 +55,11 @@ local function display(who)
   return (entry and entry.name or who):gsub("%-", " ")
 end
 local function rosterRefresh()
-  wipe(FT.roster)
   local total = GetNumGuildMembers and GetNumGuildMembers() or 0
+  -- A roster request may finish later; an empty interim result must not erase
+  -- known members or make their note-based teams disappear.
+  if total == 0 then FT:Refresh(); return end
+  wipe(FT.roster)
   for i = 1, total do
     local name, rank, rankID, level, class, _, note, _, online, _, _, _, _, _, _, _, guid = GetGuildRosterInfo(i)
     if name then
@@ -92,6 +95,67 @@ local function rosterRefresh()
     migrateMap(FT.professions)
     migrateMap(FT.playerInfo)
     migrateMap(FT.attunements)
+    local labels={}
+    for who, entry in pairs(FT.roster) do
+      local label=entry.noteTeam and trim(entry.noteTeam):gsub("%s+"," ")
+      if label and #label>=2 and #label<=24 and not label:find("[|%c]") then
+        local folded=label:lower()
+        labels[folded]=labels[folded] or {name=label,members={}}
+        labels[folded].members[who]=true
+      end
+    end
+    local function leaderFor(group)
+      local candidates={}
+      for who in pairs(group.members) do
+        if FT:IsTeamLeader(who) then
+          table.insert(candidates,who)
+        end
+      end
+      table.sort(candidates)
+      if candidates[1] then return candidates[1] end
+      for who, entry in pairs(FT.roster) do
+        if tonumber(entry.rankID)==0 then return who end
+      end
+      candidates={}
+      for who in pairs(FT.roster) do if FT:IsGuildOfficer(who) then table.insert(candidates,who) end end
+      table.sort(candidates)
+      if candidates[1] then return candidates[1] end
+      for who in pairs(group.members) do table.insert(candidates,who) end
+      table.sort(candidates)
+      return candidates[1]
+    end
+    local match={}
+    for label, group in pairs(labels) do
+      local exact, colorMatch
+      for id, team in pairs(FT.teams) do
+        if team.name and team.name:lower()==label and (not exact or id<exact.id) then exact=team end
+        if team.color and team.color:lower()==label and (not colorMatch or id<colorMatch.id) then colorMatch=team end
+      end
+      local team=exact or colorMatch
+      if not team then
+        local id="note-"..norm(group.name)
+        if not FT.deleted[id] then
+          local color=FT:Color(group.name)
+          for _,candidate in ipairs(FT.colors) do
+            if candidate.name:lower()==label then color=candidate; break end
+          end
+          local owner=leaderFor(group)
+          team={id=id,name=group.name,focus="General",motd="Welcome to "..group.name,
+            owner=owner,color=color.name,members={},ownerParticipates=false,
+            noteMembers={},events={},fromNotes=true}
+          FT.teams[id]=team
+        end
+      elseif team.fromNotes and not team.delegatedOwner then
+        -- If a roster arrived in pieces, replace the temporary steward once
+        -- the matching Team Leader appears; never override an admin transfer.
+        local leader=leaderFor(group)
+        if leader and FT:IsTeamLeader(leader) and not FT:IsTeamLeader(team.owner) then
+          team.owner=leader
+          team.ownerParticipates=team.members[leader] and true or false
+        end
+      end
+      match[label]=team
+    end
     for _, team in pairs(FT.teams) do
       team.owner=migrateKey(team.owner)
       migrateMap(team.members)
@@ -103,17 +167,18 @@ local function rosterRefresh()
       for who in pairs(team.noteMembers) do
         local entry=FT.roster[who]
         local label=entry and entry.noteTeam
-        if not label or (label:lower() ~= team.name:lower() and label:lower() ~= (team.color or ""):lower()) then
+        if not label or match[trim(label):gsub("%s+"," "):lower()]~=team then
           if team.members[who] == "member" then
             FT:RecordActivity(team,display(who).." left after their guild note changed")
             team.members[who]=nil
+            if who==team.owner then team.ownerParticipates=false end
           end
           team.noteMembers[who]=nil
         end
       end
       for who, entry in pairs(FT.roster) do
         local label=entry.noteTeam
-        if label and (label:lower() == team.name:lower() or label:lower() == (team.color or ""):lower()) and
+        if label and match[trim(label):gsub("%s+"," "):lower()]==team and
           (who ~= team.owner or team.ownerParticipates) and not team.members[who] then
           team.members[who]="member"
           team.noteMembers[who]=true
@@ -121,6 +186,7 @@ local function rosterRefresh()
         end
       end
     end
+    FT.db.teams=FT.teams
   end
   FT:Refresh()
 end
@@ -191,7 +257,7 @@ function FT:CanOwnTeam(who, name, color)
 end
 function FT:CanDelete(team, who)
   return team and (self:IsGuildOfficer(who) or
-    (team.owner == norm(who) and self:CanOwnTeam(who, team.name, team.color)))
+    (team.owner == norm(who) and (team.delegatedOwner==norm(who) or self:CanOwnTeam(who, team.name, team.color))))
 end
 function FT:CanSeeDetails(team, who)
   return team and (team.members[norm(who)] or team.owner == norm(who) or self:IsGuildOfficer(who))
@@ -199,7 +265,7 @@ end
 function FT:CanManage(team, who)
   local role = self:Member(team, who)
   return team and (self:IsGuildOfficer(who) or
-    (team.owner == norm(who) and self:CanOwnTeam(who, team.name, team.color)) or role == "officer")
+    (team.owner == norm(who) and (team.delegatedOwner==norm(who) or self:CanOwnTeam(who, team.name, team.color))) or role == "officer")
 end
 local function emit(channel, target, op, ...)
   if not myGuild() then return end
@@ -407,6 +473,17 @@ local function apply(op, f, actor)
     FT.invitations[id]=nil
     if FT.selected==id then FT.selected=nil end
     save()
+  elseif op == "TRANSFER" and team and FT:IsGuildOfficer(actor) and FT.roster[norm(f[3])] and
+    valid(f[4],20) and tonumber(f[4]) and
+    tonumber(f[4])>(tonumber(team.ownerChangedAt) or 0) then
+    local nextOwner=norm(f[3])
+    FT:RecordActivity(team,display(actor).." transferred leadership from "..
+      display(team.owner).." to "..display(nextOwner))
+    team.owner=nextOwner
+    team.delegatedOwner=nextOwner
+    team.ownerChangedAt=tonumber(f[4])
+    team.ownerParticipates=team.members[nextOwner] and true or false
+    save()
   elseif not team then return
   elseif op == "APPLY" and actor == f[3] and not team.members[actor] and
     (not f[4] or valid(f[4], 70)) and (not f[5] or f[5] == "PvE" or f[5] == "PvP" or f[5] == "Both") then
@@ -585,6 +662,10 @@ local function syncTeams()
     for id in pairs(FT.guildDeleted) do table.insert(pendingPackets,{"GUILD_DEL",id}) end
   end
   for id, team in pairs(FT.teams) do
+    if FT:IsGuildOfficer(selfName()) and team.delegatedOwner and team.ownerChangedAt then
+      table.insert(pendingPackets,{"NEW",id,team.name,team.focus,(team.motd or ""):sub(1,70),selfName(),FT:Color(team.color).name})
+      table.insert(pendingPackets,{"TRANSFER",id,team.owner,tostring(team.ownerChangedAt)})
+    end
     if team.owner == selfName() then
       local packets = {{"NEW", id, team.name, team.focus, team.motd, team.owner, FT:Color(team.color).name},
         {"SYNC", id, team.name, team.focus, team.motd, FT:Color(team.color).name}}

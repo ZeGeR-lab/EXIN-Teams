@@ -486,6 +486,18 @@ control("Team color",510,-442,100,function()
   for i,color in ipairs(FT.colors) do if color.name == team.color then index=i; break end end
   FT:Act("COLOR",team.id,FT.colors[index % #FT.colors + 1].name)
 end)
+local transferButton=control("Transfer",615,-442,78,function()
+  local team=chosen()
+  if not team or not FT:IsGuildOfficer(me()) then return end
+  local teamID=team.id
+  ask("New team leader's full character name", "", function(name)
+    local who=name:match("^%s*(.-)%s*$"):lower():gsub("%s+","-")
+    if not FT.roster[who] then FT:Notice("Choose a character in the loaded guild roster."); return end
+    if not FT.teams[teamID] or FT.teams[teamID].owner==who then return end
+    local stamp=tostring(time()*1000+math.floor(GetTime()*1000)%1000)
+    FT:Act("TRANSFER",teamID,who,stamp)
+  end)
+end)
 
 card(attunementPage, 12, -44, 190, 556)
 card(attunementPage, 208, -44, 558, 556)
@@ -738,7 +750,9 @@ local function drawTeams()
     accent:SetVertexColor(0.61, 0.86, 0.25)
   else
     header:SetText("|cff" .. FT:Color(team.color).hex .. team.name .. "|r  •  " .. (team.focus or "General"))
-    message:SetText("|cff8b9b8bLeader:|r " .. team.owner .. "\n" .. (team.motd or ""))
+    message:SetText("|cff8b9b8bLeader:|r " ..
+      (FT.roster[team.owner] and FT.roster[team.owner].name or team.owner:gsub("%-"," ")) ..
+      "\n" .. (team.motd or ""))
     local hex=FT:Color(team.color).hex
     accent:SetVertexColor(tonumber(hex:sub(1,2),16)/255, tonumber(hex:sub(3,4),16)/255, tonumber(hex:sub(5,6),16)/255)
   end
@@ -760,6 +774,7 @@ local function drawTeams()
   participationButton:SetShown(team and team.owner==me() and true or false)
   participationButton:SetText(team and team.members[me()] and "Leave active roster" or "Join active roster")
   deleteButton:SetShown(FT:CanDelete(team,me()) and true or false)
+  transferButton:SetShown(team and FT:IsGuildOfficer(me()) and true or false)
   rosterTitle:SetText("|cff9bdd00ROSTER|r  |cff8b9b8b"..#members.." members|r")
   for i,t in ipairs(rosterRows) do
     local who=members[i]
