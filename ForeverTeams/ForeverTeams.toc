@@ -1,9 +1,10 @@
 ## Interface: 16001
 ## Title: EXIN Teams
 ## Notes: Team management for Ex Inferno in WoW Forever
-## Version: 0.5.0
+## Version: 0.5.1
 ## SavedVariables: ForeverTeamsDB
 Core.lua
 Data.lua
 UI.lua
 Calendar.lua
+Minimap.lua

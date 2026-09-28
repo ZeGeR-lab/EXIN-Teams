@@ -837,6 +837,10 @@ function FT:Draw()
     drawTeams()
   end
 end
+function FT:Toggle()
+  if panel:IsShown() then panel:Hide()
+  elseif self:OpenGuild() then panel:Show(); self:Refresh() end
+end
 SLASH_FOREVERTEAMS1 = "/teams"
 SLASH_FOREVERTEAMS2 = "/exin"
 SlashCmdList.FOREVERTEAMS = function(command)
@@ -852,6 +856,5 @@ SlashCmdList.FOREVERTEAMS = function(command)
       "; character key="..own)
     return
   end
-  if panel:IsShown() then panel:Hide()
-  elseif FT:OpenGuild() then panel:Show(); FT:Refresh() end
+  FT:Toggle()
 end

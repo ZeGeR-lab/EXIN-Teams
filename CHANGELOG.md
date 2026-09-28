@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1 — 2026-09-28
+
+- Added a compact minimap button using the supplied EXIN symbol. Click to open or close EXIN Teams; drag around the minimap to move it. Its position is saved between sessions.
+- Included the icon as a 64×64 game-compatible TGA inside the addon folder.
+
 ## 0.5.0 — 2026-09-27
 
 - Automatically create teams from valid public guild notes formatted `Team - Discord name`, including teams no addon user has created yet. Match each note to one existing team by name or color and keep its roster current as notes change. Team Leaders whose notes match their team become its initial leaders; otherwise an available guild officer is chosen as steward.

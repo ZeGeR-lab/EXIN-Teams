@@ -134,3 +134,7 @@ Click Rank check at the bottom-left of EXIN Teams or type /exin rankcheck to
 see the guild rank reported by the game, the roster rank, and admin status.
 If the version is older than 0.4.4, replace the ForeverTeams folder with the
 new release.
+
+MINIMAP ICON (0.5.1)
+Click the EXIN symbol by the minimap to open or close EXIN Teams. Drag it
+around the minimap to choose a position; the angle is saved across logins.
