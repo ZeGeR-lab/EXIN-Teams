@@ -170,3 +170,7 @@ CHECK VERSION (0.5.8)
 The bottom-left button asks online EXIN Teams users for their installed
 versions and reports any newer version after six seconds. It cannot download
 or install from GitHub. The diagnostic /exin rankcheck command still works.
+
+RECRUITMENT EDITOR (0.5.9)
+The recruitment message now stays inside a framed multiline text area with
+a character counter and the existing Save/Post to Trade controls.

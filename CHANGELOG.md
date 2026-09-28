@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.9 — 2026-09-28
+
+- Replace the recruitment popup's stretched one-line input border with a framed multiline editor; keep the message and buttons inside the dialog and display a 240-character counter.
+
 ## 0.5.8 — 2026-09-28
 
 - Replace the Rank check button with Check version. It asks other online EXIN Teams clients for their installed versions and reports whether a newer version is present. Older clients that do not support the check are identified as unverified.
