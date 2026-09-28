@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.2 — 2026-09-28
+
+- Guild-note import now detects an existing team by normalized name (including `Team Blue` versus `Blue`) or color before creating a note team.
+- When an older note-generated team duplicates a manually created team, keep the manual team and migrate the duplicate's roster, events, invitations, and applications into it. Remember the removed note team so later sync cannot bring it back.
+
 ## 0.5.1 — 2026-09-28
 
 - Added a compact minimap button using the supplied EXIN symbol. Click to open or close EXIN Teams; drag around the minimap to move it. Its position is saved between sessions.

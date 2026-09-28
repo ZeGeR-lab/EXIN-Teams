@@ -138,3 +138,9 @@ new release.
 MINIMAP ICON (0.5.1)
 Click the EXIN symbol by the minimap to open or close EXIN Teams. Drag it
 around the minimap to choose a position; the angle is saved across logins.
+
+DUPLICATE TEAM CHECK (0.5.2)
+Guild notes use an existing team with a matching name or color. Team Blue and
+Blue are treated as the same name for this lookup. Existing manual teams stay
+in place; roster and events from older note-created duplicates are moved into
+them. Two manually created teams are never automatically merged.

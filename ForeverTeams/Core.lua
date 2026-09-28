@@ -2,7 +2,7 @@ local ADDON, FT = ...
 _G.ForeverTeams = FT
 FT.version = 1
 local addonMetadata=C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
-FT.versionString=(addonMetadata and addonMetadata(ADDON,"Version")) or "0.5.1"
+FT.versionString=(addonMetadata and addonMetadata(ADDON,"Version")) or "0.5.2"
 FT.teams = {}
 FT.roster = {}
 FT.invitations = {}
@@ -95,11 +95,15 @@ local function rosterRefresh()
     migrateMap(FT.professions)
     migrateMap(FT.playerInfo)
     migrateMap(FT.attunements)
+    local function noteKey(value)
+      local normalized=trim(value):gsub("%s+"," "):lower()
+      return normalized:gsub("^team ","")
+    end
     local labels={}
     for who, entry in pairs(FT.roster) do
       local label=entry.noteTeam and trim(entry.noteTeam):gsub("%s+"," ")
       if label and #label>=2 and #label<=24 and not label:find("[|%c]") then
-        local folded=label:lower()
+        local folded=noteKey(label)
         labels[folded]=labels[folded] or {name=label,members={}}
         labels[folded].members[who]=true
       end
@@ -125,13 +129,23 @@ local function rosterRefresh()
       return candidates[1]
     end
     local match={}
+    for id, team in pairs(FT.teams) do
+      if team.fromNotes==nil and id:sub(1,5)=="note-" then team.fromNotes=true end
+    end
     for label, group in pairs(labels) do
-      local exact, colorMatch
+      local team, bestScore
       for id, team in pairs(FT.teams) do
-        if team.name and team.name:lower()==label and (not exact or id<exact.id) then exact=team end
-        if team.color and team.color:lower()==label and (not colorMatch or id<colorMatch.id) then colorMatch=team end
+        local sameName=team.name and noteKey(team.name)==label
+        local sameColor=team.color and noteKey(team.color)==label
+        local score=sameName and (team.fromNotes and 2 or 0) or
+          sameColor and (team.fromNotes and 3 or 1)
+        if score and (not bestScore or score<bestScore or
+          (score==bestScore and id<match[label].id)) then
+          match[label]=team
+          bestScore=score
+        end
       end
-      local team=exact or colorMatch
+      local team=match[label]
       if not team then
         local id="note-"..norm(group.name)
         if not FT.deleted[id] then
@@ -156,6 +170,38 @@ local function rosterRefresh()
       end
       match[label]=team
     end
+    -- A prior build may have created note-blue while an older manually made
+    -- Blue team was still syncing. Preserve the manual team and its content.
+    for id, duplicate in pairs(FT.teams) do
+      local canonical=duplicate.fromNotes and match[noteKey(duplicate.name)]
+      if canonical and canonical~=duplicate then
+        canonical.members=canonical.members or {}
+        canonical.noteMembers=canonical.noteMembers or {}
+        for who, role in pairs(duplicate.members or {}) do
+          if not canonical.members[who] then canonical.members[who]=role end
+        end
+        for who in pairs(duplicate.noteMembers or {}) do canonical.noteMembers[who]=true end
+        canonical.events=canonical.events or {}
+        local eventIDs={}
+        for _, event in ipairs(canonical.events) do eventIDs[event.id]=true end
+        for _, event in ipairs(duplicate.events or {}) do
+          if not eventIDs[event.id] then table.insert(canonical.events,event); eventIDs[event.id]=true end
+        end
+        for _,field in ipairs({"requests","invitations"}) do
+          local collection=FT[field]
+          if collection[id] then
+            collection[canonical.id]=collection[canonical.id] or {}
+            for who,value in pairs(collection[id]) do
+              if collection[canonical.id][who]==nil then collection[canonical.id][who]=value end
+            end
+            collection[id]=nil
+          end
+        end
+        if FT.selected==id then FT.selected=canonical.id end
+        FT.deleted[id]={owner=duplicate.owner,by=selfName()}
+        FT.teams[id]=nil
+      end
+    end
     for _, team in pairs(FT.teams) do
       team.owner=migrateKey(team.owner)
       migrateMap(team.members)
@@ -167,7 +213,7 @@ local function rosterRefresh()
       for who in pairs(team.noteMembers) do
         local entry=FT.roster[who]
         local label=entry and entry.noteTeam
-        if not label or match[trim(label):gsub("%s+"," "):lower()]~=team then
+        if not label or match[noteKey(label)]~=team then
           if team.members[who] == "member" then
             FT:RecordActivity(team,display(who).." left after their guild note changed")
             team.members[who]=nil
@@ -178,7 +224,7 @@ local function rosterRefresh()
       end
       for who, entry in pairs(FT.roster) do
         local label=entry.noteTeam
-        if label and match[trim(label):gsub("%s+"," "):lower()]==team and
+        if label and match[noteKey(label)]==team and
           (who ~= team.owner or team.ownerParticipates) and not team.members[who] then
           team.members[who]="member"
           team.noteMembers[who]=true
@@ -463,7 +509,7 @@ local function apply(op, f, actor)
     if f[6] ~= actor or team or not FT:CanOwnTeam(actor, f[3], FT:Color(f[7]).name) or FT.deleted[id] then return end
     FT.teams[id] = { id = id, name = f[3], focus = f[4], motd = f[5], owner = actor,
       color = FT:Color(f[7]).name,
-      members = {}, ownerParticipates=false, events = {} }
+      members = {}, ownerParticipates=false, events = {}, fromNotes=id:sub(1,5)=="note-" }
     save()
     rosterRefresh()
   elseif op == "DEL" and team and FT:CanDelete(team, actor) then
