@@ -2,7 +2,7 @@ local ADDON, FT = ...
 _G.ForeverTeams = FT
 FT.version = 1
 local addonMetadata=C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
-FT.versionString=(addonMetadata and addonMetadata(ADDON,"Version")) or "0.5.7"
+FT.versionString=(addonMetadata and addonMetadata(ADDON,"Version")) or "0.5.8"
 FT.teams = {}
 FT.roster = {}
 FT.invitations = {}
@@ -845,6 +845,53 @@ local function syncTeams()
     C_Timer.After(delay, function() send(unpack(payload)) end)
   end
 end
+local function versionParts(value)
+  if type(value)~="string" then return end
+  local major,minor,patch=value:match("^(%d+)%.(%d+)%.(%d+)$")
+  if major then return tonumber(major),tonumber(minor),tonumber(patch) end
+end
+local function compareVersions(first,second)
+  local a,b,c=versionParts(first)
+  local x,y,z=versionParts(second)
+  if not a or not x then return nil end
+  if a~=x then return a>x and 1 or -1 end
+  if b~=y then return b>y and 1 or -1 end
+  if c~=z then return c>z and 1 or -1 end
+  return 0
+end
+function FT:CheckVersion()
+  if not myGuild() then self:Notice("Join a guild before checking versions."); return end
+  self.versionCheckID=(self.versionCheckID or 0)+1
+  local request=tostring(self.versionCheckID)
+  self.versionReplies={}
+  self.versionSeen={}
+  self:Notice("Checking EXIN Teams versions among online guildmates...")
+  send("VERSION_CHECK",request)
+  C_Timer.After(6,function()
+    if tostring(FT.versionCheckID)~=request then return end
+    local total,newer,older=0,{},{ }
+    for who,version in pairs(FT.versionReplies or {}) do
+      total=total+1
+      local comparison=compareVersions(version,FT.versionString)
+      if comparison and comparison>0 then table.insert(newer,display(who).." (v"..version..")")
+      elseif comparison and comparison<0 then table.insert(older,display(who)) end
+    end
+    table.sort(newer)
+    local summary
+    if #newer>0 then
+      summary="Your version: v"..FT.versionString..". Newer version found with "..table.concat(newer,", ")..
+        ". Download the latest EXIN Teams files from GitHub and restart the game."
+    elseif total>0 then
+      summary="Your version: v"..FT.versionString..". No newer version found among "..total..
+        " connected guildmate"..(total==1 and "" or "s").."."
+    elseif next(FT.versionSeen or {}) then
+      summary="No version replies. A guildmate is connected but may use an older EXIN Teams build. Your version: v"..FT.versionString.."."
+    else
+      summary="No Connection Found: no other guild member online with EXIN Teams. Your version: v"..FT.versionString.."."
+    end
+    if FT.ShowVersionStatus then FT:ShowVersionStatus(summary) else FT:Notice(summary) end
+  end)
+end
 function FT:CheckConnection()
   if not myGuild() then return end
   self.peers={}
@@ -1046,8 +1093,22 @@ frame:SetScript("OnEvent", function(_, event, ...)
     local actor = norm(sender)
     if actor == selfName() or not FT.roster[actor] then return end
     if FT.peers then FT.peers[actor]=true end
+    if FT.versionSeen then FT.versionSeen[actor]=true end
     local fields = {}
     for part in (message .. "|"):gmatch("(.-)|") do table.insert(fields, part) end
+    if fields[1]=="VERSION_CHECK" then
+      if channel=="GUILD" and fields[2] and fields[2]:match("^%d+$") and #fields[2]<=12 then
+        emit("WHISPER",actor,"VERSION_REPLY",fields[2],FT.versionString)
+      end
+      return
+    elseif fields[1]=="VERSION_REPLY" then
+      if channel=="WHISPER" and fields[2]==tostring(FT.versionCheckID) and
+        versionParts(fields[3]) then
+        FT.versionReplies=FT.versionReplies or {}
+        FT.versionReplies[actor]=fields[3]
+      end
+      return
+    end
     if fields[1] == "INVITE_NOTICE" then
       if channel~="WHISPER" or not valid(fields[2],48) then return end
       local team=FT.teams[fields[2]]

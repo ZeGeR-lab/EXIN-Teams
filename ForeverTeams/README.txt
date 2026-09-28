@@ -165,3 +165,8 @@ and click Join invite, or reply to the inviter if they lack the addon.
 LAYOUT FIX (0.5.7)
 Recruitment is at the bottom left beside Rank check. All activity remains
 in the top navigation bar.
+
+CHECK VERSION (0.5.8)
+The bottom-left button asks online EXIN Teams users for their installed
+versions and reports any newer version after six seconds. It cannot download
+or install from GitHub. The diagnostic /exin rankcheck command still works.

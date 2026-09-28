@@ -79,7 +79,12 @@ local function rankCheck()
     whileDead=true,hideOnEscape=true,preferredIndex=3}
   StaticPopup_Show("FOREVER_TEAMS_RANK_CHECK",status)
 end
-button(panel,"Rank check",20,-584,100,rankCheck)
+StaticPopupDialogs.EXIN_TEAMS_VERSION_STATUS={text="%s",button1=OKAY or "OK",timeout=0,
+  whileDead=true,hideOnEscape=true,preferredIndex=3}
+function FT:ShowVersionStatus(status)
+  StaticPopup_Show("EXIN_TEAMS_VERSION_STATUS",status)
+end
+button(panel,"Check version",20,-584,105,function() FT:CheckVersion() end)
 local currentPage = "teams"
 local drawGuildActivity
 local pageFrames = {teams=teamPage, attunements=attunementPage, quests=questPageFrame,activity=guildActivityPage}

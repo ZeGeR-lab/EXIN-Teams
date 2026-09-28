@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.8 — 2026-09-28
+
+- Replace the Rank check button with Check version. It asks other online EXIN Teams clients for their installed versions and reports whether a newer version is present. Older clients that do not support the check are identified as unverified.
+- Keep `/exin rankcheck` available as a troubleshooting command without showing its button.
+
 ## 0.5.7 — 2026-09-28
 
 - Move the Recruitment button beside Rank check in the bottom bar so it no longer overlaps the All activity tab.
