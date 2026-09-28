@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.7 — 2026-09-28
+
+- Move the Recruitment button beside Rank check in the bottom bar so it no longer overlaps the All activity tab.
+
 ## 0.5.6 — 2026-09-28
 
 - Add an All activity tab with a chronological, paginated view of public team changes and team events across the guild, including other teams. Team owners replay recent activity to reconnecting clients.

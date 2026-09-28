@@ -152,7 +152,7 @@ button(recruitment,"Post to Trade",310,-210,110,function()
   recruitment.lastPost=GetTime()
 end)
 button(recruitment,"Close",425,-210,60,function() recruitment:Hide() end)
-local recruitButton=button(panel,"Recruitment",595,-12,135,function()
+local recruitButton=button(panel,"Recruitment",130,-584,110,function()
   if not FT.db then FT:OpenGuild() end
   recruitBox:SetText(FT.db and FT.db.recruitment or "")
   recruitment:Show()
