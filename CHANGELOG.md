@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.3 — 2026-09-28
+
+- Rebuilt the minimap icon with a transparent circular edge, a contained EXIN symbol, and a thin integrated border. Removed the oversized tracking frame that left a black square sticking out.
+
 ## 0.5.2 — 2026-09-28
 
 - Guild-note import now detects an existing team by normalized name (including `Team Blue` versus `Blue`) or color before creating a note team.

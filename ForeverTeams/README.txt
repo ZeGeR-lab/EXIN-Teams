@@ -144,3 +144,7 @@ Guild notes use an existing team with a matching name or color. Team Blue and
 Blue are treated as the same name for this lookup. Existing manual teams stay
 in place; roster and events from older note-created duplicates are moved into
 them. Two manually created teams are never automatically merged.
+
+MINIMAP ICON FIX (0.5.3)
+The EXIN symbol now sits inside a small circular button with transparent
+corners. Drag it around the minimap as before; its saved position remains.

@@ -9,14 +9,8 @@ button:RegisterForClicks("LeftButtonUp")
 button:RegisterForDrag("LeftButton")
 
 local icon = button:CreateTexture(nil, "ARTWORK")
-icon:SetPoint("CENTER")
-icon:SetSize(24, 24)
+icon:SetAllPoints(button)
 icon:SetTexture("Interface\\AddOns\\ForeverTeams\\EXIN_Icon")
-
-local border = button:CreateTexture(nil, "OVERLAY")
-border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
-border:SetSize(52, 52)
-border:SetPoint("TOPLEFT", -11, 11)
 
 local angle = math.rad(220)
 local radius = 80
