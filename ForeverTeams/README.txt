@@ -152,3 +152,6 @@ corners. Drag it around the minimap as before; its saved position remains.
 MINIMAP POSITION (0.5.4)
 The icon now sits on the outside rim of the minimap at 32 pixels, similar
 to nearby buttons. Your previous saved angle still applies.
+
+MINIMAP SIZE (0.5.5)
+The icon is now 24 pixels across to match the smaller neighboring button.

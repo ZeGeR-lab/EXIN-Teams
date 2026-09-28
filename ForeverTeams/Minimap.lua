@@ -1,7 +1,7 @@
 local _, FT = ...
 
 local button = CreateFrame("Button", "EXINTeamsMinimapButton", Minimap)
-button:SetSize(32, 32)
+button:SetSize(24, 24)
 button:SetFrameStrata("MEDIUM")
 button:SetFrameLevel(Minimap:GetFrameLevel() + 8)
 button:EnableMouse(true)

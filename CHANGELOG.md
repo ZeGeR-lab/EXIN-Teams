@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.5 — 2026-09-28
+
+- Reduce the EXIN minimap button from 32 to 24 pixels to match the smaller neighboring minimap icon while keeping its saved rim position.
+
 ## 0.5.4 — 2026-09-28
 
 - Move the EXIN minimap button outward to the decorative minimap rim and size it to 32 pixels like neighboring small buttons. Dragging and the saved angle still work.
