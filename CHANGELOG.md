@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.4 — 2026-09-28
+
+- Move the EXIN minimap button outward to the decorative minimap rim and size it to 32 pixels like neighboring small buttons. Dragging and the saved angle still work.
+
 ## 0.5.3 — 2026-09-28
 
 - Rebuilt the minimap icon with a transparent circular edge, a contained EXIN symbol, and a thin integrated border. Removed the oversized tracking frame that left a black square sticking out.

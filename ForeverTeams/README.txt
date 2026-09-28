@@ -148,3 +148,7 @@ them. Two manually created teams are never automatically merged.
 MINIMAP ICON FIX (0.5.3)
 The EXIN symbol now sits inside a small circular button with transparent
 corners. Drag it around the minimap as before; its saved position remains.
+
+MINIMAP POSITION (0.5.4)
+The icon now sits on the outside rim of the minimap at 32 pixels, similar
+to nearby buttons. Your previous saved angle still applies.

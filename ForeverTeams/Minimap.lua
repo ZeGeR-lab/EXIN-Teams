@@ -1,7 +1,7 @@
 local _, FT = ...
 
 local button = CreateFrame("Button", "EXINTeamsMinimapButton", Minimap)
-button:SetSize(30, 30)
+button:SetSize(32, 32)
 button:SetFrameStrata("MEDIUM")
 button:SetFrameLevel(Minimap:GetFrameLevel() + 8)
 button:EnableMouse(true)
@@ -13,8 +13,10 @@ icon:SetAllPoints(button)
 icon:SetTexture("Interface\\AddOns\\ForeverTeams\\EXIN_Icon")
 
 local angle = math.rad(220)
-local radius = 80
 local function place()
+  -- The minimap's decorative rim extends beyond its map texture. Keep the
+  -- button centered on that rim at the default size, and follow larger maps.
+  local radius = math.max(100, (Minimap:GetWidth() or 0) / 2 + 10)
   button:ClearAllPoints()
   button:SetPoint("CENTER", Minimap, "CENTER", radius * math.cos(angle), radius * math.sin(angle))
 end
