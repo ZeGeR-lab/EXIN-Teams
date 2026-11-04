@@ -72,7 +72,7 @@ local function removeMember(who)
 end
 local permissionsPanel=CreateFrame("Frame",nil,panel,"BackdropTemplate")
 permissionsPanel:SetPoint("TOPLEFT",detail,"TOPLEFT",0,0); permissionsPanel:SetSize(465,465)
-permissionsPanel:SetBackdrop({bgFile="Interface\\\\".."DialogFrame\\\\".."UI-DialogBox-Background"})
+permissionsPanel:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background"})
 permissionsPanel:SetBackdropColor(0.025,0.035,0.05,0.98); permissionsPanel:Hide()
 label(permissionsPanel,"OFFICER PERMISSIONS",0,0,420,"GameFontNormalLarge")
 label(permissionsPanel,"Guild Master and designated administrator only",0,-25,420,"GameFontHighlightSmall")
