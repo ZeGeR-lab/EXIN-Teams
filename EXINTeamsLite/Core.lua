@@ -78,6 +78,15 @@ local function isAdminIdentity(key)
   end
   return count==1 and match==key
 end
+local function metadataIsNewer(team,revision,actor)
+  local current=tonumber(team.metaChangedAt) or 0
+  if revision~=current then return revision>current end
+  return norm(actor)>norm(team.metaChangedBy or "")
+end
+local function setMetadataRevision(team,revision,actor)
+  team.metaChangedAt=revision
+  team.metaChangedBy=norm(actor)
+end
 local function setTeamOwner(team,newOwner)
   newOwner=norm(newOwner)
   if not team or newOwner=="" then return false end
@@ -250,10 +259,11 @@ local function apply(op,f,actor)
     end
     -- Metadata and ownership have independent revisions; stale metadata never rolls back newer edits.
     local metadataRevision=tonumber(f[10]) or 0
-    if metadataRevision>(tonumber(team.metaChangedAt) or -1) then
+    local metadataActor=norm(f[11] or actor)
+    if metadataIsNewer(team,metadataRevision,metadataActor) then
       team.name,team.focus,team.motd,team.color=f[3],f[4],f[5],color(f[6])
       team.emblem=emblemId(f[7] or team.emblem)
-      team.metaChangedAt=metadataRevision
+      setMetadataRevision(team,metadataRevision,metadataActor)
     end
     if incomingOwner then
       if incomingOwner~=team.owner then
@@ -302,25 +312,25 @@ local function apply(op,f,actor)
     team.members[who]=nil; if team.noteMembers then team.noteMembers[who]=nil end; if team.manualMembers then team.manualMembers[who]=nil end; save()
   elseif op=="NAME" then
     local revision=tonumber(f[4])
-    if not LT:CanManage(team,actor) or not valid(f[3],24) or not revision or revision<=(tonumber(team.metaChangedAt) or 0) then return false end
+    if not LT:CanManage(team,actor) or not valid(f[3],24) or not revision or not metadataIsNewer(team,revision,actor) then return false end
     local existing=findTeamByName(f[3]); if existing and existing~=id then return false end
-    team.name=f[3]; team.metaChangedAt=revision; save()
+    team.name=f[3]; setMetadataRevision(team,revision,actor); save()
   elseif op=="MOTD" then
     local revision=tonumber(f[4])
-    if not LT:CanManage(team,actor) or not valid(f[3],150) or not revision or revision<(tonumber(team.metaChangedAt) or 0) then return false end
-    team.motd=f[3]; team.metaChangedAt=math.max(revision,tonumber(team.metaChangedAt) or 0); save()
+    if not LT:CanManage(team,actor) or not valid(f[3],150) or not revision or not metadataIsNewer(team,revision,f[5] or actor) then return false end
+    team.motd=f[3]; setMetadataRevision(team,revision,f[5] or actor); save()
   elseif op=="FOCUS" then
     local revision=tonumber(f[4])
-    if not LT:CanManage(team,actor) or not valid(f[3],48) or not revision or revision<=(tonumber(team.metaChangedAt) or 0) then return false end
-    team.focus=f[3]; team.metaChangedAt=revision; save()
+    if not LT:CanManage(team,actor) or not valid(f[3],48) or not revision or not metadataIsNewer(team,revision,actor) then return false end
+    team.focus=f[3]; setMetadataRevision(team,revision,actor); save()
   elseif op=="COLOR" then
     local revision=tonumber(f[4])
-    if not LT:CanManage(team,actor) or not revision or revision<=(tonumber(team.metaChangedAt) or 0) then return false end
-    team.color=color(f[3]); team.metaChangedAt=revision; save()
+    if not LT:CanManage(team,actor) or not revision or not metadataIsNewer(team,revision,actor) then return false end
+    team.color=color(f[3]); setMetadataRevision(team,revision,actor); save()
   elseif op=="EMBLEM" then
     local revision=tonumber(f[4])
-    if not LT:CanManage(team,actor) or not valid(f[3],4) or not revision or revision<=(tonumber(team.metaChangedAt) or 0) then return false end
-    team.emblem=emblemId(f[3]); team.metaChangedAt=revision; save()
+    if not LT:CanManage(team,actor) or not valid(f[3],4) or not revision or not metadataIsNewer(team,revision,actor) then return false end
+    team.emblem=emblemId(f[3]); setMetadataRevision(team,revision,actor); save()
   elseif op=="TRANSFER" then
     local newOwner=norm(f[3])
     if not LT:IsGuildOfficer(actor) or not LT.roster[newOwner] then return false end
@@ -359,8 +369,8 @@ local function syncTeams()
       -- Keep metadata packets small; MOTD travels separately so long messages
       -- cannot silently exceed the addon-message size limit during reconnect sync.
       send("NEW",id,team.name,team.focus or "General","",team.owner,team.color or "White",team.emblem or "E01")
-      send("SYNC",id,team.name,team.focus or "General","",team.color or "White",team.emblem or "E01",team.owner,tostring(team.ownerChangedAt or 0),tostring(team.metaChangedAt or 0))
-      if team.motd and team.motd~="" then send("MOTD",id,team.motd,tostring(team.metaChangedAt or 0)) end
+      send("SYNC",id,team.name,team.focus or "General","",team.color or "White",team.emblem or "E01",team.owner,tostring(team.ownerChangedAt or 0),tostring(team.metaChangedAt or 0),team.metaChangedBy or selfName())
+      if team.motd and team.motd~="" then send("MOTD",id,team.motd,tostring(team.metaChangedAt or 0),team.metaChangedBy or selfName()) end
       send("RCLR",id)
       for who,role in pairs(team.members or {}) do send("ROSTER",id,who,role) end
     end
