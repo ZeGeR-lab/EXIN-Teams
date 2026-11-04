@@ -255,6 +255,7 @@ end
 button(panel,"Officer permissions",525,-520,130,managePermissions)
 function LT:Draw()
   if rosterPanel:IsShown() then drawRoster() end
+  if permissionsPanel:IsShown() then drawPermissions() end
   for _,b in ipairs(teamButtons) do b:Hide() end
   local query=(search:GetText() or ""):lower()
   local teams=sortedTeams()
