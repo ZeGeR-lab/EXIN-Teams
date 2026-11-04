@@ -1,6 +1,6 @@
 local ADDON, LT = ...
 _G.EXINTeamsLite = LT
-LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.5.15"
+LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.5.16"
 LT.PREFIX = "EXINL1" -- Dedicated Lite channel; avoids collisions with the private Full edition.
 LT.teams, LT.roster, LT.authorizedOfficers = {}, {}, {}
 LT.selected, LT.db = nil, nil
@@ -210,6 +210,20 @@ local function rosterRefresh()
         team.members[who]=team.members[who] or "member"
         team.noteMembers[who]=true
       end
+    end
+    -- A character who leaves the guild must not remain as a stale manual member.
+    -- Keep the owner identity itself so an Officer can transfer ownership if needed.
+    for who in pairs(team.manualMembers) do
+      if not LT.roster[who] then
+        team.manualMembers[who]=nil
+        if not team.noteMembers[who] then team.members[who]=nil end
+      end
+    end
+    -- Reassert the owner role when the owner returns to the guild roster.
+    if team.owner and LT.roster[team.owner] then
+      team.members[team.owner]="leader"
+      team.manualMembers[team.owner]=true
+      team.noteMembers[team.owner]=nil
     end
   end
   -- Remove authorizations for characters no longer in the guild on this client.
