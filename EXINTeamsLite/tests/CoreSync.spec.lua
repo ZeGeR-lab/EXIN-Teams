@@ -64,6 +64,8 @@ assert(LT.teams.team1.members["officer-aeriepeak"]=="officer","Team Leader must 
 assert(not LT:IsGuildOfficer("OldMember-AeriePeak"),"ordinary Team Leader must not have guild-wide Officer permissions")
 receive("AUTH|Member-AeriePeak|yes|203","OldMember-AeriePeak")
 assert(LT.authorizedOfficers["member-aeriepeak"].at==201,"Team Leader must not change guild-wide Officer permissions")
+assert(LT:CanManage(LT.teams.team1,"OldMember-AeriePeak"),"fixture should establish Team Leader management access")
+assert((tonumber(LT.teams.team1.metaChangedAt) or 0)<10,"metadata revision fixture should allow revision 10")
 receive("NAME|team1|Leader Rename|10","OldMember-AeriePeak")
 assert(LT.teams.team1.name=="Leader Rename","Team Leader should be able to manage team metadata")
 receive("SYNC|team1|Stale Snapshot|General||Red|E02|member-aeriepeak|150|5","Officer-AeriePeak")
