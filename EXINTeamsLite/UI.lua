@@ -248,6 +248,47 @@ function LT:Draw()
   for _,r in ipairs(memberRows) do r:Hide() end
   if team then
     local canManage=self:CanManage(team,self:SelfName())
+    if not team.settingsButtons then
+      team.settingsButtons={}
+      team.settingsButtons.rename=button(detail,"Rename",0,-450,75,function()
+        local t=chosen(); if t and LT:CanManage(t,LT:SelfName()) then
+          ask("New team name (2–24 characters)",t.name,function(value)
+            value=(value or ""):match("^%s*(.-)%s*$")
+            if #value>=2 and #value<=24 and not value:find("[|\\r\\n]") then LT:Act("NAME",t.id,value) else LT:Notice("Team names must be 2–24 characters.") end
+          end)
+        end
+      end)
+      team.settingsButtons.focus=button(detail,"Set focus",82,-450,82,function()
+        local t=chosen(); if t and LT:CanManage(t,LT:SelfName()) then
+          ask("Team focus / category",t.focus or "General",function(value)
+            value=(value or ""):match("^%s*(.-)%s*$")
+            if #value>0 and #value<=48 and not value:find("[|\\r\\n]") then LT:Act("FOCUS",t.id,value) end
+          end)
+        end
+      end)
+      team.settingsButtons.motd=button(detail,"Set message",170,-450,95,function()
+        local t=chosen(); if t and LT:CanManage(t,LT:SelfName()) then
+          ask("Team message (max 150 characters)",t.motd or "",function(value)
+            value=(value or ""):match("^%s*(.-)%s*$")
+            if #value>0 and #value<=150 and not value:find("[|\\r\\n]") then LT:Act("MOTD",t.id,value) end
+          end)
+        end
+      end)
+      team.settingsButtons.transfer=button(detail,"Transfer owner",271,-450,112,function()
+        local t=chosen(); if not t or not LT:IsGuildOfficer(LT:SelfName()) then return end
+        ask("Transfer ownership to which guild character?", "",function(value)
+          local who=(value or ""):lower():gsub("^%s*(.-)%s*$","%1"):gsub("%s+","-")
+          if LT.roster[who] then
+            StaticPopupDialogs.EXIN_LITE_TRANSFER={text="Transfer ownership of "..t.name.." to "..(LT.roster[who].name or who).."?",
+              button1=ACCEPT,button2=CANCEL,timeout=0,whileDead=true,hideOnEscape=true,
+              OnAccept=function() LT:Act("TRANSFER",t.id,who) end}
+            StaticPopup_Show("EXIN_LITE_TRANSFER")
+          else LT:Notice("That character is not in the current guild roster.") end
+        end)
+      end)
+    end
+    for _,control in pairs(team.settingsButtons) do control:SetShown(canManage) end
+    team.settingsButtons.transfer:SetShown(self:IsGuildOfficer(self:SelfName()))
     for i,who in ipairs(sortedMembers(team)) do
       if not memberRows[i] then
         local row=CreateFrame("Frame",nil,detail); row:SetSize(440,25)
