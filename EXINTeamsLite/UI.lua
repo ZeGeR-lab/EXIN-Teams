@@ -102,6 +102,10 @@ local function addMember()
 end
 local function removeMember(who)
   local team=chosen(); if team and LT:CanManage(team,LT:SelfName()) then
+    if team.noteMembers and team.noteMembers[who] then
+      LT:Notice("This is primary membership from the guild note. Change the guild note first to move this character.")
+      return
+    end
     ask("Remove "..memberDisplay(who).." from "..team.name.."? Type the character name to confirm.",who:gsub("-"," "),function(confirm)
       if confirm:lower():gsub("%s+","-")==who then LT:Act("REMOVE",team.id,who) end
     end)
@@ -146,7 +150,15 @@ local function drawRoster()
       row.teams=label(row,"",198,0,115,"GameFontDisableSmall")
       row.action=button(row,"",318,-1,82,function(b)
         local t=chosen(); if not t or not LT:CanManage(t,LT:SelfName()) then return end
-        if t.members[b.member] then LT:Act("REMOVE",t.id,b.member) else LT:Act("ADD",t.id,b.member) end
+        if t.members[b.member] then
+          if t.noteMembers and t.noteMembers[b.member] then
+            LT:Notice("This is primary membership from the guild note. Change the guild note first to move this character.")
+          else
+            LT:Act("REMOVE",t.id,b.member)
+          end
+        else
+          LT:Act("ADD",t.id,b.member)
+        end
         drawRoster()
       end)
       rosterRows[i]=row
@@ -157,8 +169,9 @@ local function drawRoster()
     row.teams:SetText(teamMembershipSummary(who))
     row.action.member=who
     local inTeam=team and team.members and team.members[who]
-    row.action:SetText(team and who==team.owner and "Owner" or (inTeam and "Remove" or "Add"))
-    row.action:SetEnabled(team~=nil and who~=team.owner and LT:CanManage(team,LT:SelfName()))
+    row.action:SetText(team and who==team.owner and "Owner" or
+      (team and team.noteMembers and team.noteMembers[who] and "Primary" or (inTeam and "Remove" or "Add")))
+    row.action:SetEnabled(team~=nil and who~=team.owner and not (team.noteMembers and team.noteMembers[who]) and LT:CanManage(team,LT:SelfName()))
     row.action:Show(); row:Show()
   end
 end
@@ -309,7 +322,11 @@ function LT:Draw()
       local m=self.roster[who]
       row.name:SetText((m and m.online and "|cff44dd77●|r " or "|cff888888○|r ")..memberDisplay(who))
       row.role.member=who; row.role:SetText((team.members[who] or "member"):gsub("^%l",string.upper)); row.role:SetShown(canManage and who~=team.owner); row.role:SetEnabled(canManage and who~=team.owner)
-      row.remove.member=who; row.remove:SetShown(canManage and who~=team.owner); row:Show()
+      row.remove.member=who
+      row.remove:SetText(team.noteMembers and team.noteMembers[who] and "Primary" or "Remove")
+      row.remove:SetShown(canManage and who~=team.owner)
+      row.remove:SetEnabled(canManage and who~=team.owner and not (team.noteMembers and team.noteMembers[who]))
+      row:Show()
     end
     if not team.addButton then team.addButton=button(detail,"Add guild member",0,-420,125,addMember) end
     team.addButton:SetShown(canManage)
