@@ -240,14 +240,19 @@ local function apply(op,f,actor)
     if not LT:CanManage(team,actor) or not valid(f[3],80) or not LT.roster[norm(f[3])] or
       (f[4]~="member" and f[4]~="officer" and f[4]~="leader") then return false end
     local who=norm(f[3]); team.members[who]=f[4]
-    team.noteMembers[who]=nil; team.manualMembers=team.manualMembers or {}; team.manualMembers[who]=true
+    -- Preserve guild-note provenance for primary members when changing their team role.
+    if not (team.noteMembers and team.noteMembers[who]) then
+      team.manualMembers=team.manualMembers or {}; team.manualMembers[who]=true
+    end
     save()
   elseif op=="ADD" then
     if not LT:CanManage(team,actor) or not LT.roster[norm(f[3])] then return false end
     local who=norm(f[3]); team.members[who]="member"; team.noteMembers[who]=nil; team.manualMembers=team.manualMembers or {}; team.manualMembers[who]=true; save()
   elseif op=="REMOVE" then
     local who=norm(f[3])
-    if not team.members[who] or (actor~=who and not LT:CanManage(team,actor)) or who==team.owner then return false end
+    -- Primary membership is controlled by the public guild note, not an addon toggle.
+    if not team.members[who] or (team.noteMembers and team.noteMembers[who]) or
+      (actor~=who and not LT:CanManage(team,actor)) or who==team.owner then return false end
     team.members[who]=nil; if team.noteMembers then team.noteMembers[who]=nil end; if team.manualMembers then team.manualMembers[who]=nil end; save()
   elseif op=="NAME" then
     if not LT:CanManage(team,actor) or not valid(f[3],24) then return false end
