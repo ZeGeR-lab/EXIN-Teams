@@ -12,7 +12,7 @@ function CreateFrame()
   function f:SetScript(_,fn) captured=fn end
   return f
 end
-function GetGuildInfo() return "Ex Inferno","Guild Master",0 end
+function GetGuildInfo() return "Ex Inferno","Member",4 end
 function UnitFullName() return "Snoop Wharg","AeriePeak" end
 function UnitName() return "Snoop Wharg" end
 function GetNumGuildMembers() return #roster end
