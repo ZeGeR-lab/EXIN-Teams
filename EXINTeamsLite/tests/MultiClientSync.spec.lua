@@ -106,12 +106,14 @@ member.online=false
 snoop.LT:Act("DEL","crimson")
 flush()
 assert(snoop.LT.teams.crimson==nil and snoop.LT.deleted.crimson~=nil,"admin deletion should create a tombstone")
+local sentBeforeReconnect=#sent
 member.online=true
 member.env.C_ChatInfo.SendAddonMessage(member.LT.PREFIX,"HELLO|"..member.LT:SelfName(),"GUILD")
 flush()
 local tombstoneReplay=false
-for _,packet in ipairs(sent) do
-  if packet.from==snoop.name and packet.message=="DEL|crimson" and member.online then tombstoneReplay=true end
+for i=sentBeforeReconnect+1,#sent do
+  local packet=sent[i]
+  if packet.from==snoop.name and packet.message=="DEL|crimson" then tombstoneReplay=true end
 end
 assert(tombstoneReplay,"reconnecting client should trigger an Officer tombstone replay")
 assert(member.LT.teams.crimson==nil,"reconnect tombstone replay must remove a stale team")
