@@ -1,6 +1,6 @@
 local ADDON, LT = ...
 _G.EXINTeamsLite = LT
-LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.5.30"
+LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.5.31"
 LT.PREFIX = "EXINL2" -- Realm-scoped protocol; avoids Full collisions and rejects legacy unscoped packets.
 LT.teams, LT.roster, LT.authorizedOfficers = {}, {}, {}
 LT.selected, LT.db = nil, nil
@@ -277,7 +277,18 @@ local function apply(op,f,actor)
     local id,name,focus,motd,owner,teamColor=f[2],f[3],f[4],f[5],norm(f[6]),color(f[7])
     if not valid(id,48) or not valid(name,24) or not valid(focus,48) or not validOptional(motd,150) or not LT.roster[owner] or
       LT.teams[id] or (LT.deleted and LT.deleted[id]) or not LT:IsGuildOfficer(actor) then return false end
-    if findTeamByName(name) then return false end
+    local duplicateId=findTeamByName(name)
+    if duplicateId then
+      -- Simultaneous Officer creations can arrive in different orders on
+      -- different clients. Keep the lexicographically smallest stable ID so
+      -- every client converges on the same team regardless of packet order.
+      if id>=duplicateId then return false end
+      LT.deleted=LT.deleted or {}
+      local previousTombstone=LT.deleted[duplicateId]
+      LT.deleted[duplicateId]={by=actor,at=math.max(time(),tonumber(previousTombstone and previousTombstone.at) or 0)}
+      LT.teams[duplicateId]=nil
+      if LT.selected==duplicateId then LT.selected=nil end
+    end
     LT.teams[id]={id=id,name=name,focus=focus,motd=motd,owner=owner,color=teamColor,emblem=emblemId(f[8]),members={[owner]="leader"},noteMembers={},manualMembers={[owner]=true},events={}}
     save(); rosterRefresh(); return true
   end
