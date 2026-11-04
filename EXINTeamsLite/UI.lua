@@ -250,13 +250,21 @@ function LT:Draw()
     for i,who in ipairs(sortedMembers(team)) do
       if not memberRows[i] then
         local row=CreateFrame("Frame",nil,detail); row:SetSize(440,25)
-        row.name=label(row,"",0,0,300,"GameFontHighlight")
-        row.remove=button(row,"Remove",350,-1,75,function(b) removeMember(b.member) end)
+        row.name=label(row,"",0,0,235,"GameFontHighlight")
+        row.role=button(row,"Role",240,-1,88,function(b)
+          local t=chosen(); local who=b.member
+          if not t or not LT:CanManage(t,LT:SelfName()) or who==t.owner then return end
+          local current=t.members[who] or "member"
+          local nextRole=({member="officer",officer="leader",leader="member"})[current] or "member"
+          LT:Act("ROSTER",t.id,who,nextRole)
+        end)
+        row.remove=button(row,"Remove",340,-1,75,function(b) removeMember(b.member) end)
         memberRows[i]=row
       end
       local row=memberRows[i]; row:ClearAllPoints(); row:SetPoint("TOPLEFT",0,-65-(i-1)*27)
       local m=self.roster[who]
-      row.name:SetText((m and m.online and "|cff44dd77●|r " or "|cff888888○|r ")..memberDisplay(who).."  |cff9aabb4"..(team.members[who] or "member").."|r")
+      row.name:SetText((m and m.online and "|cff44dd77●|r " or "|cff888888○|r ")..memberDisplay(who))
+      row.role.member=who; row.role:SetText((team.members[who] or "member"):gsub("^%l",string.upper)); row.role:SetShown(canManage and who~=team.owner); row.role:SetEnabled(canManage and who~=team.owner)
       row.remove.member=who; row.remove:SetShown(canManage and who~=team.owner); row:Show()
     end
     if not team.addButton then team.addButton=button(detail,"Add guild member",0,-420,125,addMember) end
