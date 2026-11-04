@@ -107,6 +107,66 @@ local function removeMember(who)
     end)
   end
 end
+local rosterPanel=CreateFrame("Frame",nil,panel,"BackdropTemplate")
+rosterPanel:SetPoint("TOPLEFT",detail,"TOPLEFT",0,0); rosterPanel:SetSize(465,465)
+rosterPanel:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background"})
+rosterPanel:SetBackdropColor(0.025,0.035,0.05,0.98); rosterPanel:Hide()
+label(rosterPanel,"GUILD ROSTER",0,0,420,"GameFontNormalLarge")
+local rosterHint=label(rosterPanel,"Select a team first, then add or remove guild members.",0,-25,430,"GameFontHighlightSmall")
+local rosterSearch=CreateFrame("EditBox",nil,rosterPanel,"InputBoxTemplate")
+rosterSearch:SetSize(270,24); rosterSearch:SetPoint("TOPLEFT",0,-52); rosterSearch:SetAutoFocus(false)
+rosterSearch:SetTextInsets(5,5,2,2); rosterSearch:SetMaxLetters(48)
+local rosterScroll=CreateFrame("ScrollFrame",nil,rosterPanel,"UIPanelScrollFrameTemplate")
+rosterScroll:SetPoint("TOPLEFT",0,-86); rosterScroll:SetSize(430,315)
+local rosterContent=CreateFrame("Frame",nil,rosterScroll); rosterContent:SetSize(410,315); rosterScroll:SetScrollChild(rosterContent)
+local rosterRows={}
+local function teamMembershipSummary(who)
+  local names={}
+  for _,t in pairs(LT.teams) do if t.members and t.members[who] then table.insert(names,t.name) end end
+  table.sort(names)
+  return #names>0 and table.concat(names,", ") or "No teams"
+end
+local function drawRoster()
+  for _,row in ipairs(rosterRows) do row:Hide() end
+  local q=(rosterSearch:GetText() or ""):lower()
+  local names={}
+  for who,m in pairs(LT.roster) do
+    local display=(m.name or who):lower()
+    if q=="" or display:find(q,1,true)==1 then table.insert(names,who) end
+  end
+  table.sort(names,function(a,b) return (LT.roster[a].name or a)<(LT.roster[b].name or b) end)
+  rosterContent:SetHeight(math.max(315,#names*34))
+  local team=chosen()
+  rosterHint:SetText(team and ("Managing membership in: "..team.name.."  |  "..#names.." characters shown") or "Select a team before changing memberships.")
+  for i,who in ipairs(names) do
+    if not rosterRows[i] then
+      local row=CreateFrame("Frame",nil,rosterContent); row:SetSize(405,31)
+      row.name=label(row,"",0,0,195,"GameFontHighlight")
+      row.teams=label(row,"",198,0,115,"GameFontDisableSmall")
+      row.action=button(row,"",318,-1,82,function(b)
+        local t=chosen(); if not t or not LT:CanManage(t,LT:SelfName()) then return end
+        if t.members[b.member] then LT:Act("REMOVE",t.id,b.member) else LT:Act("ADD",t.id,b.member) end
+        drawRoster()
+      end)
+      rosterRows[i]=row
+    end
+    local row=rosterRows[i]; local m=LT.roster[who]
+    row:ClearAllPoints(); row:SetPoint("TOPLEFT",0,-(i-1)*34)
+    row.name:SetText((m.online and "|cff44dd77●|r " or "|cff888888○|r ")..(m.name or who))
+    row.teams:SetText(teamMembershipSummary(who))
+    row.action.member=who
+    local inTeam=team and team.members and team.members[who]
+    row.action:SetText(inTeam and "Remove" or "Add")
+    row.action:SetEnabled(team~=nil and LT:CanManage(team,LT:SelfName()))
+    row.action:Show(); row:Show()
+  end
+end
+rosterSearch:SetScript("OnTextChanged",drawRoster)
+rosterSearch:SetScript("OnEscapePressed",function(self) self:ClearFocus() end)
+button(rosterPanel,"Back to teams",0,-420,120,function() rosterPanel:Hide(); detail:Show() end)
+button(panel,"Guild roster",330,-520,110,function()
+  detail:Hide(); permissionsPanel:Hide(); rosterPanel:Show(); rosterSearch:SetText(""); drawRoster()
+end)
 local permissionsPanel=CreateFrame("Frame",nil,panel,"BackdropTemplate")
 permissionsPanel:SetPoint("TOPLEFT",detail,"TOPLEFT",0,0); permissionsPanel:SetSize(465,465)
 permissionsPanel:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background"})
@@ -159,11 +219,13 @@ local backButton=button(permissionsPanel,"Back to teams",0,-420,120,function()
   permissionsPanel:Hide(); detail:Show()
 end)
 local function managePermissions()
+  rosterPanel:Hide()
   if not LT:IsGuildLeader(LT:SelfName()) then LT:Notice("Only the Guild Master or designated administrator can manage Officer permissions."); return end
   detail:Hide(); permissionsPanel:Show(); permissionSearch:SetText(""); drawPermissions()
 end
 button(panel,"Officer permissions",525,-520,130,managePermissions)
 function LT:Draw()
+  if rosterPanel:IsShown() then drawRoster() end
   for _,b in ipairs(teamButtons) do b:Hide() end
   local query=(search:GetText() or ""):lower()
   local teams=sortedTeams()
