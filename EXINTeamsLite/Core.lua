@@ -1,7 +1,7 @@
 local ADDON, LT = ...
 _G.EXINTeamsLite = LT
-LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.5.29"
-LT.PREFIX = "EXINL1" -- Dedicated Lite channel; avoids collisions with the private Full edition.
+LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.5.30"
+LT.PREFIX = "EXINL2" -- Realm-scoped protocol; avoids Full collisions and rejects legacy unscoped packets.
 LT.teams, LT.roster, LT.authorizedOfficers = {}, {}, {}
 LT.selected, LT.db = nil, nil
 -- Set this to the administrator character's normalized name when confirmed.
@@ -179,7 +179,9 @@ local function emit(channel,target,op,...)
   if not guild() then return end
   local fields={op,...}
   for _,v in ipairs(fields) do if type(v)~="string" or v:find("[|\r\n]") then return end end
-  local msg=table.concat(fields,"|")
+  local scope=guildStorageKey(guild())
+  if scope:find("[|\\r\\n]") then return end
+  local msg=scope.."|"..table.concat(fields,"|")
   if #msg>240 then LT:Notice("A sync packet was too large and was not sent."); return end
   if C_ChatInfo and C_ChatInfo.SendAddonMessage then C_ChatInfo.SendAddonMessage(LT.PREFIX,msg,channel,target)
   elseif SendAddonMessage then SendAddonMessage(LT.PREFIX,msg,channel,target) end
@@ -482,6 +484,11 @@ frame:SetScript("OnEvent",function(_,event,...)
     local actor=norm(sender)
     if actor==selfName() or not LT.roster[actor] then return end
     local f={}; for part in (message.."|"):gmatch("(.-)|") do table.insert(f,part) end
+    -- Every packet is bound to the sender's guild name and realm. Delayed
+    -- traffic from a previous guild must never mutate the newly active save.
+    if not guild() or f[1]~=guildStorageKey(guild()) then return end
+    table.remove(f,1)
+    if not f[1] then return end
     if f[1]=="HELLO" then emit("WHISPER",actor,"PONG"); syncTeams(); return end
     if f[1]=="PONG" then return end
     if channel=="WHISPER" and f[1]~="HELLO" then return end
