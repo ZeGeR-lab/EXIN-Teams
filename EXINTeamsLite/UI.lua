@@ -26,7 +26,8 @@ button(panel,"Close",665,-18,70,function() panel:Hide() end)
 local search=CreateFrame("EditBox",nil,panel,"InputBoxTemplate")
 search:SetSize(220,24); search:SetPoint("TOPLEFT",22,-78); search:SetAutoFocus(false); search:SetTextInsets(5,5,2,2)
 search:SetScript("OnTextChanged",function() LT:Draw() end)
-local teamList=CreateFrame("Frame",nil,panel); teamList:SetPoint("TOPLEFT",20,-115); teamList:SetSize(235,405)
+local teamList=CreateFrame("ScrollFrame",nil,panel,"UIPanelScrollFrameTemplate"); teamList:SetPoint("TOPLEFT",20,-115); teamList:SetSize(235,405)
+local teamContent=CreateFrame("Frame",nil,teamList); teamContent:SetSize(215,405); teamList:SetScrollChild(teamContent)
 local detail=CreateFrame("Frame",nil,panel); detail:SetPoint("TOPLEFT",270,-75); detail:SetSize(465,465)
 local memberScroll=CreateFrame("ScrollFrame",nil,detail,"UIPanelScrollFrameTemplate")
 memberScroll:SetPoint("TOPLEFT",detail,"TOPLEFT",0,-95); memberScroll:SetSize(440,315)
@@ -253,8 +254,9 @@ function LT:Draw()
   local teams=sortedTeams()
   local visible={}
   for _,t in ipairs(teams) do if query=="" or t.name:lower():find(query,1,true) then table.insert(visible,t) end end
+  teamContent:SetHeight(math.max(405,#visible*28))
   for i,t in ipairs(visible) do
-    if not teamButtons[i] then teamButtons[i]=button(teamList,"",0,-(i-1)*28,220,function(b) LT.selected=b.teamID; LT:Draw() end) end
+    if not teamButtons[i] then teamButtons[i]=button(teamContent,"",0,-(i-1)*28,210,function(b) LT.selected=b.teamID; LT:Draw() end) end
     local b=teamButtons[i]; b.teamID=t.id; b:SetText(emblemText(t).." "..(LT.selected==t.id and "» " or "")..t.name.." ("..tostring((function() local n=0; for _ in pairs(t.members or {}) do n=n+1 end; return n end)())..")")
     b:ClearAllPoints(); b:SetPoint("TOPLEFT",0,-(i-1)*28); b:Show()
   end
