@@ -1,4 +1,6 @@
 local captured
+local currentGuild="Ex Inferno"
+local currentRealm="AeriePeak"
 local roster={
   {"Snoop Wharg-AeriePeak","Member",4,80,"Warrior",nil,"",nil,true},
   {"Guildmaster-AeriePeak","Guild Master",0,80,"Paladin",nil,"",nil,true},
@@ -14,7 +16,8 @@ function CreateFrame()
   function f:SetScript(_,fn) captured=fn end
   return f
 end
-function GetGuildInfo() return "Ex Inferno","Member",4 end
+function GetGuildInfo() return currentGuild,"Member",4 end
+function GetRealmName() return currentRealm end
 function UnitFullName() return "Snoop Wharg","AeriePeak" end
 function UnitName() return "Snoop Wharg" end
 function GetNumGuildMembers() return #roster end
@@ -176,4 +179,33 @@ assert(not LT:IsGuildOfficer("Officer-AeriePeak"),"empty guild roster window mus
 roster=completeRoster
 captured(nil,"GUILD_ROSTER_UPDATE")
 assert(LT:IsGuildOfficer("Officer-AeriePeak"),"valid roster refresh should restore the designated Officer permission")
+
+-- Leaving a guild must clear every in-memory identity and permission without deleting its saved data.
+local originalGuildDB=EXINTeamsLiteDB["Ex Inferno@AeriePeak"]
+assert(originalGuildDB and originalGuildDB.teams.team2,"the active guild data should be persisted under its realm-scoped key")
+currentGuild=nil
+captured(nil,"PLAYER_GUILD_UPDATE")
+assert(LT.db==nil and next(LT.roster)==nil,"leaving a guild must detach the previous database and clear the roster")
+assert(next(LT.teams)==nil and next(LT.authorizedOfficers)==nil,"leaving a guild must clear cached teams and Officer permissions")
+assert(not LT:IsGuildOfficer("Officer-AeriePeak"),"a former guild Officer must not retain administrative access after leaving")
+assert(EXINTeamsLiteDB["Ex Inferno@AeriePeak"]==originalGuildDB,"leaving must preserve the guild's saved database")
+assert(not LT:OpenGuild(),"opening Lite without a guild should fail cleanly")
+assert(next(LT.teams)==nil and LT.db==nil,"a guildless OpenGuild call must not restore stale guild data")
+
+-- The same guild name on another realm must receive a separate save and identity scope.
+currentGuild="Ex Inferno"
+currentRealm="MoonGuard"
+EXINTeamsLiteDB["Ex Inferno@MoonGuard"]={
+  teams={moon={id="moon",name="Moon Team",focus="General",motd="",color="Blue",owner="member-aeriepeak",members={},noteMembers={},manualMembers={},events={}}},
+  authorizedOfficers={},deleted={}
+}
+assert(LT:OpenGuild(),"joining a guild on another realm should open its realm-specific data")
+assert(LT.teams.moon~=nil and LT.teams.team2==nil,"same-name guilds on different realms must not share team data")
+assert(next(LT.authorizedOfficers)==nil,"permissions from another realm must not carry into this guild")
+
+-- Returning to the original realm restores only that guild's preserved save.
+currentRealm="AeriePeak"
+assert(LT:OpenGuild(),"returning to the original guild should reopen its save")
+assert(LT.teams.team2~=nil and LT.teams.moon==nil,"returning should restore the original realm's teams only")
+assert(LT.authorizedOfficers["officer-aeriepeak"]~=nil,"the original guild's saved authorization state should be restored")
 print("CoreSync.spec.lua: all synchronization and permission tests passed")
