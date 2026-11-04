@@ -4,9 +4,10 @@ local roster = {
   {"Member-AeriePeak","Member",4,80,"Priest",nil,"",nil,true},
   {"Officer-AeriePeak","Member",4,80,"Mage",nil,"",nil,true},
 }
-local clients, queue = {}, {}
+local clients, queue, sent = {}, {}, {}
 local function normalize(s) return (tostring(s or ""):lower():gsub("%s+","-")) end
 local function deliver(sender, prefix, message, channel, target)
+  table.insert(sent,{from=sender.name,message=message,channel=channel,target=target})
   if channel == "GUILD" then
     for _, client in ipairs(clients) do
       if client.online then
@@ -108,6 +109,8 @@ assert(snoop.LT.teams.crimson==nil and snoop.LT.deleted.crimson~=nil,"admin dele
 member.online=true
 member.LT:CheckConnection()
 flush()
+print("DEBUG tombstone",snoop.LT.deleted.crimson and "A-has" or "A-missing",member.LT.deleted.crimson and "B-has" or "B-missing",member.LT.teams.crimson and "B-team" or "B-no-team")
+for _,packet in ipairs(sent) do if packet.message:match("^DEL|") or packet.message:match("^HELLO|") then print("DEBUG packet",packet.from,packet.channel,packet.message) end end
 assert(member.LT.teams.crimson==nil,"reconnect tombstone replay must remove a stale team")
 assert(member.LT.deleted.crimson~=nil,"reconnect should persist the deletion tombstone")
 
