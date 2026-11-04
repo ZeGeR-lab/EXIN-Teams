@@ -55,4 +55,24 @@ assert(LT.teams.team1.members["officer-aeriepeak"]==nil,"roster reset must remov
 assert(LT.teams.team1.members["member-aeriepeak"]=="leader","roster reset must preserve note membership and owner role")
 receive("ROSTER|team1|Officer-AeriePeak|officer","Officer-AeriePeak")
 assert(LT.teams.team1.members["officer-aeriepeak"]=="officer","roster replay should restore current manual membership")
-print("CoreSync.spec.lua: all synchronization tests passed")
+
+-- Team Leaders may manage their team, but cannot delete it or change guild-wide permissions.
+receive("NAME|team1|Leader Rename","OldMember-AeriePeak")
+assert(LT.teams.team1.name=="Leader Rename","team owner should be able to manage team metadata")
+receive("DEL|team1","OldMember-AeriePeak")
+assert(LT.teams.team1~=nil,"team owner must not be allowed to delete a team")
+receive("AUTH|Member-AeriePeak|yes|202","Officer-AeriePeak")
+assert(LT.authorizedOfficers["member-aeriepeak"].at==201,"designated Officers must not alter Guild Master-only permissions")
+receive("AUTH|Member-AeriePeak|no|202","Guildmaster-AeriePeak")
+assert(LT.authorizedOfficers["member-aeriepeak"].revoked,"Guild Master should be able to revoke designated Officer access")
+
+-- Ordinary members cannot manage team metadata or perform Officer-only deletion.
+receive("NAME|team1|Unauthorized Rename","Member-AeriePeak")
+assert(LT.teams.team1.name=="Leader Rename","ordinary member must not rename a team")
+receive("DEL|team1","Member-AeriePeak")
+assert(LT.teams.team1~=nil,"ordinary member must not delete a team")
+
+-- Designated Officers may delete teams, even without an in-game Officer rank.
+receive("DEL|team1","Officer-AeriePeak")
+assert(LT.teams.team1==nil and LT.deleted.team1~=nil,"designated Officer should be allowed to delete a team")
+print("CoreSync.spec.lua: all synchronization and permission tests passed")
