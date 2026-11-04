@@ -32,10 +32,11 @@ local function flush()
   end
 end
 local function newClient(name)
-  local client={name=name,online=true,frames={},saved={}}
+  local client={name=name,online=true,frames={},saved={},env=nil}
   local env={}
   setmetatable(env,{__index=_G})
   env._G=env
+  client.env=env
   env.EXINTeamsLiteDB=client.saved
   env.CreateFrame=function()
     local frame={}
@@ -78,7 +79,9 @@ assert(snoop.LT.teams.crimson~=nil,"creator should have the new team")
 assert(member.LT.teams.crimson~=nil,"guild broadcast should deliver the new team to the connected client")
 
 -- Member reconnects; the authoritative admin responds with a complete snapshot.
+print("DEBUG connection",member.env.GetGuildInfo(),member.LT:SelfName(),#sent)
 member.LT:CheckConnection()
+print("DEBUG aftercheck",#sent)
 flush()
 assert(member.LT.teams.crimson~=nil,"HELLO handshake should replicate the team")
 assert(member.LT.teams.crimson.owner=="member-aeriepeak","team owner should replicate")
