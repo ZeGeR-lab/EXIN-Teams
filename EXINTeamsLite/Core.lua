@@ -322,7 +322,12 @@ local function apply(op,f,actor)
     save()
   elseif op=="ADD" then
     if not LT:CanManage(team,actor) or not LT.roster[norm(f[3])] then return false end
-    local who=norm(f[3]); team.members[who]="member"; team.noteMembers[who]=nil; team.manualMembers=team.manualMembers or {}; team.manualMembers[who]=true; save()
+    local who=norm(f[3])
+    -- ADD is only for a character who is not already a member. In particular,
+    -- it must not erase guild-note provenance or silently demote an existing role.
+    if team.members[who] then return false end
+    team.members[who]="member"; team.noteMembers=team.noteMembers or {}; team.manualMembers=team.manualMembers or {}
+    team.manualMembers[who]=true; save()
   elseif op=="REMOVE" then
     local who=norm(f[3])
     -- Primary membership is controlled by the public guild note, not an addon toggle.
