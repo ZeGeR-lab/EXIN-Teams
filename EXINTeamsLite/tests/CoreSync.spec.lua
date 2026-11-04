@@ -135,4 +135,15 @@ captured(nil,"GUILD_ROSTER_UPDATE")
 assert(LT.teams.team2.noteMembers["zzz-aeriepeak"]==true,"color-based legacy note should be recognized")
 captured(nil,"GUILD_ROSTER_UPDATE")
 assert(LT.teams.team2.noteMembers["zzz-aeriepeak"]==true,"recognized legacy note membership must not be erased on the next refresh")
+
+-- Changing a public note moves primary membership, and Discord names may contain hyphens.
+LT.teams.team3={
+  id="team3",name="Team Three",focus="General",motd="",color="Red",owner="random-aeriepeak",
+  members={["random-aeriepeak"]="leader"},noteMembers={},manualMembers={["random-aeriepeak"]=true},events={}
+}
+roster[7][7]="Team Three - Discord - Zzz"
+captured(nil,"GUILD_ROSTER_UPDATE")
+assert(LT.teams.team2.noteMembers["zzz-aeriepeak"]==nil,"changing the guild note should remove the old primary team membership")
+assert(LT.teams.team3.noteMembers["zzz-aeriepeak"]==true,"changing the guild note should assign the new primary team membership")
+assert(LT.roster["zzz-aeriepeak"].discordName=="Discord - Zzz","Discord names containing hyphens should be preserved")
 print("CoreSync.spec.lua: all synchronization and permission tests passed")
