@@ -2,7 +2,7 @@
 ## Title: EXIN Teams Lite
 ## Notes: Lightweight guild team and roster management for Ex Inferno
 ## Author: ZeGeR-lab
-## Version: 0.5.0
+## Version: 0.5.1
 ## SavedVariables: EXINTeamsLiteDB
 Core.lua
 UI.lua
