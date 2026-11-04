@@ -59,7 +59,11 @@ assert(LT.teams.team1.members["officer-aeriepeak"]=="officer","roster replay sho
 
 -- Team Leaders may manage their team, but cannot delete it or change guild-wide permissions.
 receive("ROSTER|team1|OldMember-AeriePeak|leader","Member-AeriePeak")
+receive("RCLR|team1","OldMember-AeriePeak")
+assert(LT.teams.team1.members["officer-aeriepeak"]=="officer","Team Leader must not be able to clear the complete team roster")
 assert(not LT:IsGuildOfficer("OldMember-AeriePeak"),"ordinary Team Leader must not have guild-wide Officer permissions")
+receive("AUTH|Member-AeriePeak|yes|203","OldMember-AeriePeak")
+assert(LT.authorizedOfficers["member-aeriepeak"].at==201,"Team Leader must not change guild-wide Officer permissions")
 receive("NAME|team1|Leader Rename","OldMember-AeriePeak")
 assert(LT.teams.team1.name=="Leader Rename","Team Leader should be able to manage team metadata")
 receive("DEL|team1","OldMember-AeriePeak")
@@ -74,6 +78,12 @@ receive("NAME|team1|Unauthorized Rename","Random-AeriePeak")
 assert(LT.teams.team1.name=="Leader Rename","ordinary member must not rename a team")
 receive("DEL|team1","Random-AeriePeak")
 assert(LT.teams.team1~=nil,"ordinary member must not delete a team")
+
+-- Only designated Officers may create teams; ordinary members cannot self-create one.
+receive("NEW|team2|Unauthorized Team|General||Random-AeriePeak|Blue|E01","Random-AeriePeak")
+assert(LT.teams.team2==nil,"ordinary member must not create a team")
+receive("NEW|team2|Officer Team|General||Random-AeriePeak|Blue|E01","Officer-AeriePeak")
+assert(LT.teams.team2~=nil and LT.teams.team2.owner=="random-aeriepeak","designated Officer should be able to create a team for a guild member")
 
 -- Designated Officers may delete teams, even without an in-game Officer rank.
 receive("DEL|team1","Officer-AeriePeak")
