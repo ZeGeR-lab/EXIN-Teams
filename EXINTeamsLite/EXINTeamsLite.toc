@@ -6,4 +6,3 @@
 ## SavedVariables: EXINTeamsLiteDB
 Core.lua
 UI.lua
-Minimap.lua
