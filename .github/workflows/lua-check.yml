@@ -36,7 +36,8 @@ jobs:
         run: |
           VERSION=$(sed -n 's/^## Version: //p' EXINTeamsLite/EXINTeamsLite.toc)
           mkdir -p package
-          cp -R EXINTeamsLite package/EXINTeamsLite
+          mkdir -p package/EXINTeamsLite
+          cp EXINTeamsLite/*.lua EXINTeamsLite/*.toc package/EXINTeamsLite/
           cd package
           zip -r "EXINTeamsLite-${VERSION}.zip" EXINTeamsLite
       - name: Upload installation archive
