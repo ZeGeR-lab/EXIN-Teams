@@ -60,8 +60,31 @@ local function trim(s) return (s or ""):match("^%s*(.-)%s*$") end
 local function norm(s) return trim(s):lower():gsub("%s+","-") end
 local function guild() return GetGuildInfo("player") end
 local function selfName()
-  local name = UnitFullName and UnitFullName("player") or UnitName("player")
+  local name, realm
+  if UnitFullName then name, realm = UnitFullName("player") else name = UnitName("player") end
+  if realm and realm ~= "" then return norm(name .. "-" .. realm) end
   return norm(name)
+end
+local function isAdminIdentity(key)
+  local admin=norm(LT.SUPER_ADMIN_NAME)
+  return admin~="" and (key==admin or key:sub(1,#admin+1)==admin.."-")
+end
+local function setTeamOwner(team,newOwner)
+  newOwner=norm(newOwner)
+  if not team or newOwner=="" then return false end
+  local previousOwner=team.owner
+  team.members=team.members or {}
+  team.manualMembers=team.manualMembers or {}
+  team.noteMembers=team.noteMembers or {}
+  if previousOwner and previousOwner~=newOwner and team.members[previousOwner]=="leader" then
+    team.members[previousOwner]="officer"
+  end
+  team.owner=newOwner
+  team.members[newOwner]="leader"
+  team.noteMembers[newOwner]=nil
+  team.manualMembers[newOwner]=true
+  team.delegatedOwner=newOwner
+  return true
 end
 local function valid(s,n) return type(s)=="string" and #s>0 and #s<=n and not s:find("[|\r\n]") end
 local function color(name)
@@ -80,8 +103,9 @@ function LT:IsGuildLeader(who)
     local g,_,rankID=GetGuildInfo("player")
     if g==guild() and tonumber(rankID)==0 then return true end
   end
-  -- Permanent EXIN administrator override; configure the exact character name above.
-  if LT.SUPER_ADMIN_NAME~="" and key==norm(LT.SUPER_ADMIN_NAME) and LT.roster[key] then return true end
+  -- Permanent EXIN administrator override. Accept the configured character identity
+  -- with or without a realm suffix, while avoiding loose partial-name matches.
+  if isAdminIdentity(key) then return true end
   local m=LT.roster[key]
   return m and tonumber(m.rankID)==0 or false
 end
@@ -186,7 +210,7 @@ local function apply(op,f,actor)
     if not valid(id,48) or not valid(name,24) or not valid(focus,48) or not valid(motd,70) or not LT.roster[owner] or
       LT.teams[id] or (LT.deleted and LT.deleted[id]) or not (actor==owner or LT:IsGuildOfficer(actor)) then return false end
     if findTeamByName(name) then return false end
-    LT.teams[id]={id=id,name=name,focus=focus,motd=motd,owner=owner,color=teamColor,emblem=emblemId(f[8]),members={},noteMembers={},events={}}
+    LT.teams[id]={id=id,name=name,focus=focus,motd=motd,owner=owner,color=teamColor,emblem=emblemId(f[8]),members={[owner]="leader"},noteMembers={},manualMembers={[owner]=true},events={}}
     save(); rosterRefresh(); return true
   end
   local id,team=f[2],LT.teams[f[2]]
@@ -200,7 +224,14 @@ local function apply(op,f,actor)
   if op=="SYNC" then
     if (actor~=team.owner and not LT:IsGuildOfficer(actor)) or not valid(f[3],24) or not valid(f[4],48) or not valid(f[5],150) then return false end
     team.name,team.focus,team.motd,team.color=f[3],f[4],f[5],color(f[6]); team.emblem=emblemId(f[7] or team.emblem)
-    if f[8] and LT.roster[norm(f[8])] then team.owner=norm(f[8]) end
+    if f[8] then
+      local incomingOwner=norm(f[8])
+      if not LT.roster[incomingOwner] then return false end
+      setTeamOwner(team,incomingOwner)
+    else
+      -- Repair legacy snapshots whose owner and Leader role have drifted apart.
+      if team.owner and LT.roster[team.owner] then setTeamOwner(team,team.owner) end
+    end
     save()
   elseif op=="ROSTER" then
     if not LT:CanManage(team,actor) or not valid(f[3],80) or not LT.roster[norm(f[3])] or
@@ -234,19 +265,8 @@ local function apply(op,f,actor)
   elseif op=="TRANSFER" then
     local newOwner=norm(f[3])
     if not LT:IsGuildOfficer(actor) or not LT.roster[newOwner] then return false end
-    local previousOwner=team.owner
-    team.members=team.members or {}
-    team.manualMembers=team.manualMembers or {}
-    team.noteMembers=team.noteMembers or {}
     -- Ownership and the visible Leader role must always agree on every client.
-    if previousOwner and previousOwner~=newOwner and team.members[previousOwner]=="leader" then
-      team.members[previousOwner]="officer"
-    end
-    team.owner=newOwner
-    team.members[newOwner]="leader"
-    team.noteMembers[newOwner]=nil
-    team.manualMembers[newOwner]=true
-    team.delegatedOwner=newOwner
+    setTeamOwner(team,newOwner)
     save()
   else return false end
   LT:Refresh(); return true
