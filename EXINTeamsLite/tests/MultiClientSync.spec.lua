@@ -112,6 +112,22 @@ snoop.LT:Act("AUTH","Officer-AeriePeak","yes","2100")
 flush()
 assert(member.LT:IsGuildOfficer("Officer-AeriePeak"),"authorized Officer status should replicate")
 
+-- Simultaneous team creation with the same name must converge regardless of arrival order.
+-- Both authorized clients create locally before either broadcast is delivered.
+snoop.LT:Act("NEW","z-team","Collision Team","Raid","","Member-AeriePeak","Blue","E01")
+local officerClient=clients[3]
+officerClient.LT:Act("NEW","a-team","Collision Team","Raid","","Officer-AeriePeak","Red","E02")
+assert(snoop.LT.teams["z-team"]~=nil and officerClient.LT.teams["a-team"]~=nil,"fixture should create the conflicting teams independently")
+flush()
+for _,client in ipairs(clients) do
+  assert(client.LT.teams["a-team"]~=nil,"every client should retain the lexicographically smallest team ID")
+  assert(client.LT.teams["z-team"]==nil,"every client should discard the losing duplicate team")
+  assert(client.LT.deleted["z-team"]~=nil,"losing duplicate team should receive a tombstone")
+end
+local staleDuplicate="Ex Inferno@AeriePeak|NEW|z-team|Collision Team|Raid||Member-AeriePeak|Blue|E01"
+member.eventHandler(nil,"CHAT_MSG_ADDON",member.LT.PREFIX,staleDuplicate,"GUILD","Snoop Wharg-AeriePeak")
+assert(member.LT.teams["z-team"]==nil,"a stale duplicate NEW packet must not resurrect the losing team")
+
 -- Ownership transfer while the former owner is offline must reconcile on reconnect.
 member.online=false
 snoop.LT:Act("TRANSFER","crimson","Officer-AeriePeak","2200")
