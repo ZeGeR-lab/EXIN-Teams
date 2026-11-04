@@ -298,7 +298,10 @@ function LT:Draw()
           if LT.roster[who] then
             StaticPopupDialogs.EXIN_LITE_TRANSFER={text="Transfer ownership of "..t.name.." to "..(LT.roster[who].name or who).."?",
               button1=ACCEPT,button2=CANCEL,timeout=0,whileDead=true,hideOnEscape=true,
-              OnAccept=function() LT:Act("TRANSFER",t.id,who) end}
+              OnAccept=function()
+                local revision=math.max(time(),(tonumber(t.ownerChangedAt) or 0)+1)
+                LT:Act("TRANSFER",t.id,who,tostring(revision))
+              end}
             StaticPopup_Show("EXIN_LITE_TRANSFER")
           else LT:Notice("That character is not in the current guild roster.") end
         end)
