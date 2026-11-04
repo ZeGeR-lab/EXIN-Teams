@@ -7,11 +7,54 @@ LT.selected, LT.db = nil, nil
 -- Set this to the administrator character's normalized name when confirmed.
 -- Example format: "character-realm" (or just "character" on a single-realm guild).
 LT.SUPER_ADMIN_NAME = "Snoop Wharg"
+LT.emblems = {
+  {id="E01",name="Ribbon 01",hex="ff3f86"},
+  {id="E02",name="Ribbon 02",hex="a72cff"},
+  {id="E03",name="Ribbon 03",hex="68aaff"},
+  {id="E04",name="Ribbon 04",hex="39d45c"},
+  {id="E05",name="Ribbon 05",hex="f2dc25"},
+  {id="E06",name="Ribbon 06",hex="ff9a24"},
+  {id="E07",name="Ribbon 07",hex="ff3445"},
+  {id="E08",name="Ribbon 08",hex="e8e8e8"},
+  {id="E09",name="Ribbon 09",hex="7e8792"},
+  {id="E10",name="Ribbon 10",hex="e65bc0"},
+  {id="E11",name="Ribbon 11",hex="b77bdc"},
+  {id="E12",name="Ribbon 12",hex="18c83b"},
+  {id="E13",name="Ribbon 13",hex="00cbbd"},
+  {id="E14",name="Ribbon 14",hex="a98ad9"},
+  {id="E15",name="Ribbon 15",hex="72d9d1"},
+  {id="E16",name="Ribbon 16",hex="c3a1e8"},
+  {id="E17",name="Ribbon 17",hex="a9b8ff"},
+  {id="E18",name="Ribbon 18",hex="df2381"},
+  {id="E19",name="Ribbon 19",hex="08b7d0"},
+  {id="E20",name="Ribbon 20",hex="1649ff"},
+  {id="E21",name="Ribbon 21",hex="9acb4d"},
+  {id="E22",name="Ribbon 22",hex="ffffff"},
+  {id="E23",name="Ribbon 23",hex="ee2347"},
+  {id="E24",name="Ribbon 24",hex="c1a36b"},
+  {id="E25",name="Ribbon 25",hex="ff861d"},
+  {id="E26",name="Ribbon 26",hex="eebd17"},
+  {id="E27",name="Ribbon 27",hex="fa315b"},
+  {id="E28",name="Ribbon 28",hex="f3f3f3"},
+  {id="E29",name="Ribbon 29",hex="428bd8"},
+  {id="E30",name="Ribbon 30",hex="12c88b"},
+  {id="E31",name="Ribbon 31",hex="cba55a"},
+  {id="E32",name="Ribbon 32",hex="52c5d9"},
+  {id="E33",name="Ribbon 33",hex="ed7b28"}
+}
 LT.colors = {
   {name="Pink",hex="ff83b7"},{name="Purple",hex="aa89ff"},{name="Blue",hex="69b6ff"},
   {name="Green",hex="78d996"},{name="Yellow",hex="f7d96b"},{name="Orange",hex="ffab69"},
   {name="Red",hex="ff7777"},{name="White",hex="eeeeee"},{name="Black",hex="838b92"},
 }
+local function emblemId(id)
+  for _, e in ipairs(LT.emblems) do if e.id==tostring(id or "") then return e.id end end
+  return "E01"
+end
+function LT:Emblem(id)
+  for _, e in ipairs(self.emblems) do if e.id==id then return e end end
+  return self.emblems[1]
+end
 local frame = CreateFrame("Frame")
 local function trim(s) return (s or ""):match("^%s*(.-)%s*$") end
 local function norm(s) return trim(s):lower():gsub("%s+","-") end
@@ -143,7 +186,7 @@ local function apply(op,f,actor)
     if not valid(id,48) or not valid(name,24) or not valid(focus,48) or not valid(motd,70) or owner~=actor or
       LT.teams[id] or (LT.deleted and LT.deleted[id]) or not LT:IsGuildOfficer(actor) then return false end
     if findTeamByName(name) then return false end
-    LT.teams[id]={id=id,name=name,focus=focus,motd=motd,owner=owner,color=teamColor,members={},noteMembers={},events={}}
+    LT.teams[id]={id=id,name=name,focus=focus,motd=motd,owner=owner,color=teamColor,emblem=emblemId(f[8]),members={},noteMembers={},events={}}
     save(); rosterRefresh(); return true
   end
   local id,team=f[2],LT.teams[f[2]]
@@ -156,7 +199,7 @@ local function apply(op,f,actor)
   if not team then return false end
   if op=="SYNC" then
     if actor~=team.owner or not valid(f[3],24) or not valid(f[4],48) or not valid(f[5],150) then return false end
-    team.name,team.focus,team.motd,team.color=f[3],f[4],f[5],color(f[6]); save()
+    team.name,team.focus,team.motd,team.color=f[3],f[4],f[5],color(f[6]); team.emblem=emblemId(f[7] or team.emblem); save()
   elseif op=="ROSTER" then
     if actor~=team.owner or not valid(f[3],80) or not LT.roster[norm(f[3])] or
       (f[4]~="member" and f[4]~="officer" and f[4]~="leader") then return false end
@@ -179,6 +222,9 @@ local function apply(op,f,actor)
   elseif op=="COLOR" then
     if not LT:CanManage(team,actor) then return false end
     team.color=color(f[3]); save()
+  elseif op=="EMBLEM" then
+    if not LT:CanManage(team,actor) or not valid(f[3],4) then return false end
+    team.emblem=emblemId(f[3]); save()
   elseif op=="TRANSFER" then
     if not LT:IsGuildOfficer(actor) or not LT.roster[norm(f[3])] then return false end
     team.owner=norm(f[3]); team.delegatedOwner=team.owner; save()
@@ -197,8 +243,8 @@ local function syncTeams()
   end
   for id,team in pairs(LT.teams) do
     if team.owner==selfName() then
-      send("NEW",id,team.name,team.focus or "General",team.motd or "",team.owner,team.color or "White")
-      send("SYNC",id,team.name,team.focus or "General",team.motd or "",team.color or "White")
+      send("NEW",id,team.name,team.focus or "General",team.motd or "",team.owner,team.color or "White",team.emblem or "E01")
+      send("SYNC",id,team.name,team.focus or "General",team.motd or "",team.color or "White",team.emblem or "E01")
       for who,role in pairs(team.members or {}) do send("ROSTER",id,who,role) end
     end
   end
