@@ -128,4 +128,11 @@ assert(LT.teams.team2.manualMembers["zzz-aeriepeak"]==nil,"guild leaver manual-m
 roster=savedRoster
 captured(nil,"GUILD_ROSTER_UPDATE")
 assert(LT.teams.team2.members["zzz-aeriepeak"]==nil,"a returning character must not regain stale manual membership")
+
+-- Legacy color-based guild notes must remain primary across repeated refreshes.
+roster[7][7]="Blue - DiscordZzz"
+captured(nil,"GUILD_ROSTER_UPDATE")
+assert(LT.teams.team2.noteMembers["zzz-aeriepeak"]==true,"color-based legacy note should be recognized")
+captured(nil,"GUILD_ROSTER_UPDATE")
+assert(LT.teams.team2.noteMembers["zzz-aeriepeak"]==true,"recognized legacy note membership must not be erased on the next refresh")
 print("CoreSync.spec.lua: all synchronization and permission tests passed")
