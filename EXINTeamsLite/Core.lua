@@ -223,7 +223,7 @@ local function apply(op,f,actor)
   elseif op=="NEW" then
     local id,name,focus,motd,owner,teamColor=f[2],f[3],f[4],f[5],norm(f[6]),color(f[7])
     if not valid(id,48) or not valid(name,24) or not valid(focus,48) or not validOptional(motd,150) or not LT.roster[owner] or
-      LT.teams[id] or (LT.deleted and LT.deleted[id]) or not (actor==owner or LT:IsGuildOfficer(actor)) then return false end
+      LT.teams[id] or (LT.deleted and LT.deleted[id]) or not LT:IsGuildOfficer(actor) then return false end
     if findTeamByName(name) then return false end
     LT.teams[id]={id=id,name=name,focus=focus,motd=motd,owner=owner,color=teamColor,emblem=emblemId(f[8]),members={[owner]="leader"},noteMembers={},manualMembers={[owner]=true},events={}}
     save(); rosterRefresh(); return true
@@ -262,7 +262,9 @@ local function apply(op,f,actor)
     if team.owner and LT.roster[team.owner] then setTeamOwner(team,team.owner) end
     save()
   elseif op=="RCLR" then
-    if not LT:CanManage(team,actor) then return false end
+    -- Full roster replacement is reserved for the owner or a guild-wide Officer.
+    -- Team Leaders may edit individual roles, but cannot wipe the team roster.
+    if actor~=team.owner and not LT:IsGuildOfficer(actor) then return false end
     -- A reconnect snapshot is authoritative: clear stale manual entries before replaying roles.
     team.members={}
     team.manualMembers={}
