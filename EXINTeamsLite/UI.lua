@@ -178,6 +178,7 @@ function LT:Draw()
   if not team and visible[1] then self.selected=visible[1].id; team=visible[1] end
   title:SetText(team and (emblemText(team).." "..team.name) or "No teams available")
   emblemButton:SetShown(team~=nil and self:CanManage(team,self:SelfName()))
+  if team then emblemButton:SetText("Emblem: "..emblemText(team)) end
   if not team then emblemPicker:Hide() end
   meta:SetText(team and ("Leader: "..memberDisplay(team.owner).."   •   Focus: "..(team.focus or "General").."   •   "..(team.motd or "")) or
     "An authorized Officer can create the first team.")
