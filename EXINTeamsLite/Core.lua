@@ -1,6 +1,6 @@
 local ADDON, LT = ...
 _G.EXINTeamsLite = LT
-LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.5.31"
+LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.5.32"
 LT.PREFIX = "EXINL2" -- Realm-scoped protocol; avoids Full collisions and rejects legacy unscoped packets.
 LT.teams, LT.roster, LT.authorizedOfficers = {}, {}, {}
 LT.selected, LT.db = nil, nil
@@ -308,9 +308,14 @@ local function apply(op,f,actor)
     if f[8] then
       incomingOwner=norm(f[8])
       ownerRevision=tonumber(f[9]) or 0
+      local incomingOwnerActor=norm(f[12] or actor)
+      local currentOwnerRevision=tonumber(team.ownerChangedAt) or 0
+      local currentOwnerActor=norm(team.ownerChangedBy or "")
+      local ownerIsNewer=ownerRevision>currentOwnerRevision or
+        (ownerRevision==currentOwnerRevision and incomingOwnerActor>currentOwnerActor)
       if not LT.roster[incomingOwner] then return false end
       if incomingOwner~=team.owner and
-        (not LT:IsGuildOfficer(actor) or ownerRevision<=(tonumber(team.ownerChangedAt) or 0)) then return false end
+        (not LT:IsGuildOfficer(actor) or ownerRevision<=0 or not ownerIsNewer) then return false end
     end
     -- Metadata and ownership have independent revisions; stale metadata never rolls back newer edits.
     local metadataRevision=tonumber(f[10]) or 0
@@ -321,11 +326,17 @@ local function apply(op,f,actor)
       setMetadataRevision(team,metadataRevision,metadataActor)
     end
     if incomingOwner then
+      local incomingOwnerActor=norm(f[12] or actor)
+      local currentOwnerRevision=tonumber(team.ownerChangedAt) or 0
+      local currentOwnerActor=norm(team.ownerChangedBy or "")
       if incomingOwner~=team.owner then
         setTeamOwner(team,incomingOwner)
         team.ownerChangedAt=ownerRevision
-      elseif ownerRevision>(tonumber(team.ownerChangedAt) or 0) then
+        team.ownerChangedBy=incomingOwnerActor
+      elseif ownerRevision>currentOwnerRevision or
+        (ownerRevision==currentOwnerRevision and incomingOwnerActor>currentOwnerActor) then
         team.ownerChangedAt=ownerRevision
+        team.ownerChangedBy=incomingOwnerActor
       end
     end
     -- Repair legacy snapshots whose owner and Leader role have drifted apart.
@@ -396,9 +407,14 @@ local function apply(op,f,actor)
     if not LT:IsGuildOfficer(actor) or not LT.roster[newOwner] then return false end
     -- Ownership and the visible Leader role must always agree on every client.
     local revision=tonumber(f[4]) or time()
-    revision=math.max(revision,(tonumber(team.ownerChangedAt) or 0)+1)
+    local currentRevision=tonumber(team.ownerChangedAt) or 0
+    local currentActor=norm(team.ownerChangedBy or "")
+    -- Equal-time transfers are resolved by actor identity, not packet order.
+    if revision<=0 or revision<currentRevision or
+      (revision==currentRevision and actor<=currentActor) then return false end
     setTeamOwner(team,newOwner)
     team.ownerChangedAt=revision
+    team.ownerChangedBy=actor
     save()
   else return false end
   LT:Refresh(); return true
@@ -434,7 +450,7 @@ local function syncTeams()
       -- Keep metadata packets small; MOTD travels separately so long messages
       -- cannot silently exceed the addon-message size limit during reconnect sync.
       send("NEW",id,team.name,team.focus or "General","",team.owner,team.color or "White",team.emblem or "E01")
-      send("SYNC",id,team.name,team.focus or "General","",team.color or "White",team.emblem or "E01",team.owner,tostring(team.ownerChangedAt or 0),tostring(team.metaChangedAt or 0),team.metaChangedBy or selfName())
+      send("SYNC",id,team.name,team.focus or "General","",team.color or "White",team.emblem or "E01",team.owner,tostring(team.ownerChangedAt or 0),tostring(team.metaChangedAt or 0),team.metaChangedBy or selfName(),team.ownerChangedBy or selfName())
       if team.motd and team.motd~="" then send("MOTD",id,team.motd,tostring(team.metaChangedAt or 0),team.metaChangedBy or selfName()) end
       send("RCLR",id)
       for who,role in pairs(team.members or {}) do send("ROSTER",id,who,role) end
