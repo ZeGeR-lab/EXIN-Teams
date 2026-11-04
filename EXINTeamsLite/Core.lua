@@ -369,7 +369,12 @@ function LT:Act(op,...)
     if not team then self:Notice("Team not found."); return end
     f[4]=tostring(math.max(time(),(tonumber(team.metaChangedAt) or 0)+1))
   end
-  for _,v in ipairs(f) do if not valid(v,150) then self:Notice("Invalid value; check length and remove pipe characters."); return end end
+  for i,v in ipairs(f) do
+    local optionalNewMotd=(op=="NEW" and i==5 and v=="")
+    if not optionalNewMotd and not valid(v,150) then
+      self:Notice("Invalid value; check length and remove pipe characters."); return
+    end
+  end
   if apply(op,f,selfName()) then send(unpack(f)) else self:Notice("You do not have permission, or the requested change was invalid.") end
 end
 local function syncTeams()
