@@ -285,8 +285,11 @@ local function syncTeams()
   end
   for id,team in pairs(LT.teams) do
     if team.owner==selfName() or LT:IsGuildOfficer(selfName()) then
-      send("NEW",id,team.name,team.focus or "General",team.motd or "",team.owner,team.color or "White",team.emblem or "E01")
-      send("SYNC",id,team.name,team.focus or "General",team.motd or "",team.color or "White",team.emblem or "E01",team.owner)
+      -- Keep metadata packets small; MOTD travels separately so long messages
+      -- cannot silently exceed the addon-message size limit during reconnect sync.
+      send("NEW",id,team.name,team.focus or "General","",team.owner,team.color or "White",team.emblem or "E01")
+      send("SYNC",id,team.name,team.focus or "General","",team.color or "White",team.emblem or "E01",team.owner)
+      if team.motd and team.motd~="" then send("MOTD",id,team.motd) end
       for who,role in pairs(team.members or {}) do send("ROSTER",id,who,role) end
     end
   end
