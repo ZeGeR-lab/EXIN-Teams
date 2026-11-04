@@ -132,6 +132,17 @@ local staleDuplicate="Ex Inferno@AeriePeak|NEW|z-team|Collision Team|Raid||Membe
 member.eventHandler(nil,"CHAT_MSG_ADDON",member.LT.PREFIX,staleDuplicate,"GUILD","Snoop Wharg-AeriePeak")
 assert(member.LT.teams["z-team"]==nil,"a stale duplicate NEW packet must not resurrect the losing team")
 
+-- Concurrent ownership transfers with identical timestamps must converge by actor identity.
+-- Snoop's normalized identity sorts after Officer's, so Snoop's transfer wins on every client.
+snoop.LT:Act("TRANSFER","a-team","Member-AeriePeak","2300")
+officerClient.LT:Act("TRANSFER","a-team","Snoop Wharg-AeriePeak","2300")
+flush()
+for _,client in ipairs(clients) do
+  assert(client.LT.teams["a-team"].owner=="member-aeriepeak","equal-time ownership transfers must converge on the same deterministic winner")
+  assert(client.LT.teams["a-team"].ownerChangedAt==2300,"winning ownership revision should be preserved without arrival-order increments")
+  assert(client.LT.teams["a-team"].ownerChangedBy=="snoop-wharg-aeriepeak","winning transfer actor should be recorded consistently")
+end
+
 -- Ownership transfer while the former owner is offline must reconcile on reconnect.
 member.online=false
 snoop.LT:Act("TRANSFER","crimson","Officer-AeriePeak","2200")
