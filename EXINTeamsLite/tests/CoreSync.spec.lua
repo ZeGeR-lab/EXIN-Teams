@@ -33,7 +33,7 @@ LT:OpenGuild()
 assert(LT:IsGuildLeader("Snoop Wharg-AeriePeak"),"permanent admin override should resolve unique realm-qualified name")
 LT.authorizedOfficers["member-aeriepeak"]={by="guildmaster-aeriepeak",at=200,revoked=true}
 local function receive(message,sender)
-  captured(nil,"CHAT_MSG_ADDON",LT.PREFIX,message,"GUILD",sender)
+  captured(nil,"CHAT_MSG_ADDON",LT.PREFIX,"Ex Inferno@AeriePeak|"..message,"GUILD",sender)
 end
 receive("AUTH|Member-AeriePeak|yes|199","Guildmaster-AeriePeak")
 assert(LT.authorizedOfficers["member-aeriepeak"].revoked,"stale grant must not undo a newer revocation")
@@ -202,6 +202,13 @@ EXINTeamsLiteDB["Ex Inferno@MoonGuard"]={
 assert(LT:OpenGuild(),"joining a guild on another realm should open its realm-specific data")
 assert(LT.teams.moon~=nil and LT.teams.team2==nil,"same-name guilds on different realms must not share team data")
 assert(next(LT.authorizedOfficers)==nil,"permissions from another realm must not carry into this guild")
+-- Delayed traffic from the previous realm must be rejected even when the sender is still a guild member.
+local previousGuildMessage="Ex Inferno@AeriePeak|DEL|moon"
+captured(nil,"CHAT_MSG_ADDON",LT.PREFIX,previousGuildMessage,"GUILD","Guildmaster-AeriePeak")
+assert(LT.teams.moon~=nil,"a delayed previous-guild deletion must not affect the current guild")
+-- Packets from the old unscoped protocol are also rejected.
+captured(nil,"CHAT_MSG_ADDON","EXINL1","DEL|moon","GUILD","Guildmaster-AeriePeak")
+assert(LT.teams.moon~=nil,"legacy unscoped protocol traffic must not mutate guild data")
 
 -- Returning to the original realm restores only that guild's preserved save.
 currentRealm="AeriePeak"
