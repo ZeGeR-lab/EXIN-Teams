@@ -261,14 +261,23 @@ function LT:Draw()
   local teams=sortedTeams()
   local visible={}
   for _,t in ipairs(teams) do if query=="" or t.name:lower():find(query,1,true) then table.insert(visible,t) end end
+  local previousSelected=self.selected
+  local team=chosen()
+  local selectionVisible=false
+  for _,candidate in ipairs(visible) do
+    if team and candidate.id==team.id then selectionVisible=true; break end
+  end
+  if not selectionVisible then
+    team=visible[1]
+    self.selected=team and team.id or nil
+  end
+  if previousSelected~=self.selected then emblemPicker:Hide() end
   teamContent:SetHeight(math.max(405,#visible*28))
   for i,t in ipairs(visible) do
     if not teamButtons[i] then teamButtons[i]=button(teamContent,"",0,-(i-1)*28,210,function(b) LT.selected=b.teamID; LT:Draw() end) end
     local b=teamButtons[i]; b.teamID=t.id; b:SetText(emblemText(t).." "..(LT.selected==t.id and "» " or "")..t.name.." ("..tostring((function() local n=0; for _ in pairs(t.members or {}) do n=n+1 end; return n end)())..")")
     b:ClearAllPoints(); b:SetPoint("TOPLEFT",0,-(i-1)*28); b:Show()
   end
-  local team=chosen()
-  if not team and visible[1] then self.selected=visible[1].id; team=visible[1] end
   title:SetText(team and (emblemText(team).." "..team.name) or "No teams available")
   emblemButton:SetShown(team~=nil and self:CanManage(team,self:SelfName()))
   if team then emblemButton:SetText("Emblem: "..emblemText(team)) end
