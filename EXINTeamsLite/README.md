@@ -1,6 +1,6 @@
 # EXIN Teams Lite
 
-**Current version: 0.5.20**
+**Current version: 0.5.26**
 
 Lightweight guild team and roster management for Ex Inferno.
 
@@ -19,7 +19,7 @@ Lightweight guild team and roster management for Ex Inferno.
 - Manage team members and team-specific roles.
 - Support multiple team memberships per character.
 - Use the guild public note as the primary team assignment. The expected note format is `TeamName - DiscordName`.
-- Search and scroll the guild roster, Officer permissions list, team list, and team member list.
+- Search and scroll the guild roster, Officer permissions list, team list, and team member list; team selection stays consistent with active search filters.
 - Assign one of 33 temporary emblem placeholders to each team.
 - Edit or clear the team message; clearing it synchronizes to other clients.
 - Warn team managers that renaming a team does not automatically rewrite guild public notes.
