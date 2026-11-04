@@ -49,6 +49,7 @@ assert(LT.teams.team1.members["member-aeriepeak"]=="leader","new owner must rece
 assert(LT.teams.team1.members["oldmember-aeriepeak"]=="officer","previous owner Leader role should be demoted")
 receive("SYNC|team1|Old Team|General||Blue|E01|oldmember-aeriepeak|140","Officer-AeriePeak")
 assert(LT.teams.team1.owner=="member-aeriepeak","stale ownership snapshot must not roll back owner")
+assert(LT.teams.team1.name=="Team Alpha","rejected stale snapshot must not partially overwrite metadata")
 receive("RCLR|team1","Officer-AeriePeak")
 assert(LT.teams.team1.members["officer-aeriepeak"]==nil,"roster reset must remove stale manual membership")
 assert(LT.teams.team1.members["member-aeriepeak"]=="leader","roster reset must preserve note membership and owner role")
