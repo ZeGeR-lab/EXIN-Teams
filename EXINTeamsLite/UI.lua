@@ -215,7 +215,9 @@ local function drawPermissions()
         local target=b.member
         local record=LT.authorizedOfficers[target]
         local currentlyAuthorized=record~=nil and not record.revoked
-        LT:Act("AUTH",target,currentlyAuthorized and "no" or "yes",tostring(time()))
+        -- Ensure two rapid permission changes still receive distinct ordered revisions.
+        local revision=math.max(time(),(tonumber(record and record.at) or 0)+1)
+        LT:Act("AUTH",target,currentlyAuthorized and "no" or "yes",tostring(revision))
         drawPermissions()
       end)
       permissionRows[i]=row
