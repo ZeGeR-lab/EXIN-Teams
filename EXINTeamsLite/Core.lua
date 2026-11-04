@@ -87,6 +87,11 @@ local function setMetadataRevision(team,revision,actor)
   team.metaChangedAt=revision
   team.metaChangedBy=norm(actor)
 end
+local function metadataIsNotOlder(team,revision,actor)
+  local current=tonumber(team.metaChangedAt) or 0
+  if revision~=current then return revision>current end
+  return norm(actor)>=norm(team.metaChangedBy or "")
+end
 local function setTeamOwner(team,newOwner)
   newOwner=norm(newOwner)
   if not team or newOwner=="" then return false end
@@ -317,7 +322,7 @@ local function apply(op,f,actor)
     team.name=f[3]; setMetadataRevision(team,revision,actor); save()
   elseif op=="MOTD" then
     local revision=tonumber(f[4])
-    if not LT:CanManage(team,actor) or not valid(f[3],150) or not revision or not metadataIsNewer(team,revision,f[5] or actor) then return false end
+    if not LT:CanManage(team,actor) or not valid(f[3],150) or not revision or not metadataIsNotOlder(team,revision,f[5] or actor) then return false end
     team.motd=f[3]; setMetadataRevision(team,revision,f[5] or actor); save()
   elseif op=="FOCUS" then
     local revision=tonumber(f[4])
