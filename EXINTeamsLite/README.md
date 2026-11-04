@@ -21,6 +21,8 @@ Lightweight guild team and roster management for Ex Inferno.
 - Use the guild public note as the primary team assignment. The expected note format is `TeamName - DiscordName`.
 - Search and scroll the guild roster, Officer permissions list, team list, and team member list.
 - Assign one of 33 temporary emblem placeholders to each team.
+- Edit or clear the team message; clearing it synchronizes to other clients.
+- Warn team managers that renaming a team does not automatically rewrite guild public notes.
 - Synchronize team metadata, membership, permissions, and deletions between online guild clients.
 
 ## Permissions
