@@ -59,8 +59,9 @@ assert(LT.teams.team1.members["officer-aeriepeak"]=="officer","roster replay sho
 
 -- Team Leaders may manage their team, but cannot delete it or change guild-wide permissions.
 receive("ROSTER|team1|OldMember-AeriePeak|leader","Member-AeriePeak")
+assert(not LT:IsGuildOfficer("OldMember-AeriePeak"),"ordinary Team Leader must not have guild-wide Officer permissions")
 receive("NAME|team1|Leader Rename","OldMember-AeriePeak")
-assert(LT.teams.team1.name=="Leader Rename","team owner should be able to manage team metadata")
+assert(LT.teams.team1.name=="Leader Rename","Team Leader should be able to manage team metadata")
 receive("DEL|team1","OldMember-AeriePeak")
 assert(LT.teams.team1~=nil,"Team Leader must not be allowed to delete a team")
 receive("AUTH|Member-AeriePeak|yes|202","Officer-AeriePeak")
