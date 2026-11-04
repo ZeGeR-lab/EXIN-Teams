@@ -115,7 +115,7 @@ assert(member.LT:IsGuildOfficer("Officer-AeriePeak"),"authorized Officer status 
 -- Simultaneous team creation with the same name must converge regardless of arrival order.
 -- Both authorized clients create locally before either broadcast is delivered.
 snoop.LT:Act("NEW","z-team","Collision Team","Raid","","Member-AeriePeak","Blue","E01")
-local officerClient=clients[3]
+local officerClient=member
 officerClient.LT:Act("NEW","a-team","Collision Team","Raid","","Officer-AeriePeak","Red","E02")
 assert(snoop.LT.teams["z-team"]~=nil and officerClient.LT.teams["a-team"]~=nil,"fixture should create the conflicting teams independently")
 flush()
