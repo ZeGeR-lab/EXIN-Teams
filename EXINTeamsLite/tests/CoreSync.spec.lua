@@ -6,6 +6,7 @@ local roster={
   {"Member-AeriePeak","Member",4,80,"Priest",nil,"",nil,true},
   {"OldMember-AeriePeak","Member",4,80,"Rogue",nil,"",nil,true},
   {"Random-AeriePeak","Member",4,80,"Hunter",nil,"",nil,true},
+  {"Zzz-AeriePeak","Member",4,80,"Hunter",nil,"",nil,true},
 }
 function CreateFrame()
   local f={}
@@ -38,6 +39,7 @@ assert(not LT.authorizedOfficers["member-aeriepeak"].revoked,"newer grant should
 receive("AUTH|Member-AeriePeak|no|200","Guildmaster-AeriePeak")
 assert(not LT.authorizedOfficers["member-aeriepeak"].revoked,"stale revocation must not undo a newer grant")
 LT.authorizedOfficers["officer-aeriepeak"]={by="guildmaster-aeriepeak",at=200,revoked=false}
+LT.authorizedOfficers["zzz-aeriepeak"]={by="guildmaster-aeriepeak",at=200,revoked=false}
 LT.teams.team1={
   id="team1",name="Old Team",focus="General",motd="",color="Blue",emblem="E01",
   owner="oldmember-aeriepeak",ownerChangedAt=100,
@@ -72,7 +74,7 @@ receive("SYNC|team1|Stale Snapshot|General||Red|E02|member-aeriepeak|150|5","Off
 assert(LT.teams.team1.name=="Leader Rename","older reconnect snapshot must not roll back newer team metadata")
 receive("NAME|team1|Stale Rename|9","OldMember-AeriePeak")
 assert(LT.teams.team1.name=="Leader Rename","older metadata revision must not overwrite a newer edit")
-receive("NAME|team1|Tie Winner|11","Snoop Wharg-AeriePeak")
+receive("NAME|team1|Tie Winner|11","Zzz-AeriePeak")
 receive("NAME|team1|Tie Loser|11","OldMember-AeriePeak")
 assert(LT.teams.team1.name=="Tie Winner","same-second metadata edits should resolve consistently by actor identity")
 receive("MOTD|team1|Current message|12","Officer-AeriePeak")
