@@ -70,14 +70,60 @@ local function removeMember(who)
     end)
   end
 end
+local permissionsPanel=CreateFrame("Frame",nil,panel,"BackdropTemplate")
+permissionsPanel:SetPoint("TOPLEFT",detail,"TOPLEFT",0,0); permissionsPanel:SetSize(465,465)
+permissionsPanel:SetBackdrop({bgFile="Interface\\\\".."DialogFrame\\\\".."UI-DialogBox-Background"})
+permissionsPanel:SetBackdropColor(0.025,0.035,0.05,0.98); permissionsPanel:Hide()
+label(permissionsPanel,"OFFICER PERMISSIONS",0,0,420,"GameFontNormalLarge")
+label(permissionsPanel,"Guild Master and designated administrator only",0,-25,420,"GameFontHighlightSmall")
+local permissionSearch=CreateFrame("EditBox",nil,permissionsPanel,"InputBoxTemplate")
+permissionSearch:SetSize(270,24); permissionSearch:SetPoint("TOPLEFT",0,-52); permissionSearch:SetAutoFocus(false)
+permissionSearch:SetTextInsets(5,5,2,2); permissionSearch:SetMaxLetters(48)
+permissionSearch:SetScript("OnEscapePressed",function(self) self:ClearFocus() end)
+local permissionScroll=CreateFrame("ScrollFrame",nil,permissionsPanel,"UIPanelScrollFrameTemplate")
+permissionScroll:SetPoint("TOPLEFT",0,-86); permissionScroll:SetSize(430,315)
+local permissionContent=CreateFrame("Frame",nil,permissionScroll)
+permissionContent:SetSize(410,315); permissionScroll:SetScrollChild(permissionContent)
+local permissionRows={}
+local function drawPermissions()
+  for _,row in ipairs(permissionRows) do row:Hide() end
+  local q=(permissionSearch:GetText() or ""):lower()
+  local names={}
+  for who,m in pairs(LT.roster) do
+    local display=(m.name or who):lower()
+    if q=="" or display:sub(1,#q)==q then table.insert(names,who) end
+  end
+  table.sort(names,function(a,b) return (LT.roster[a].name or a)<(LT.roster[b].name or b) end)
+  permissionContent:SetHeight(math.max(315,#names*30))
+  for i,who in ipairs(names) do
+    if not permissionRows[i] then
+      local row=CreateFrame("Frame",nil,permissionContent); row:SetSize(405,27)
+      row.name=label(row,"",0,0,245,"GameFontHighlight")
+      row.action=button(row,"",270,-1,115,function(b)
+        if not LT:IsGuildLeader(LT:SelfName()) then LT:Notice("Only the Guild Master or designated administrator can change Officer access."); return end
+        local target=b.member
+        LT:Act("AUTH",target,LT.authorizedOfficers[target] and "no" or "yes",tostring(time()))
+        drawPermissions()
+      end)
+      permissionRows[i]=row
+    end
+    local row=permissionRows[i]; row:ClearAllPoints(); row:SetPoint("TOPLEFT",0,-(i-1)*30)
+    local m=LT.roster[who]
+    local isOfficer=LT.authorizedOfficers[who]~=nil
+    row.name:SetText((m.online and "|cff44dd77●|r " or "|cff888888○|r ")..(m.name or who))
+    row.action.member=who
+    row.action:SetText(isOfficer and "Revoke Officer" or "Make Officer")
+    row.action:SetEnabled(not LT:IsGuildLeader(who))
+    row:Show()
+  end
+end
+permissionSearch:SetScript("OnTextChanged",drawPermissions)
+local backButton=button(permissionsPanel,"Back to teams",0,-420,120,function()
+  permissionsPanel:Hide(); detail:Show()
+end)
 local function managePermissions()
-  if not LT:IsGuildLeader(LT:SelfName()) then LT:Notice("Only the Guild Master can designate Officers."); return end
-  ask("Guild character to authorize or revoke as an EXIN Teams Officer","",function(name)
-    local who=name:lower():gsub("%s+","-")
-    if not LT.roster[who] then LT:Notice("That character is not in the current guild roster."); return end
-    if LT.authorizedOfficers[who] then LT:Act("AUTH",who,"no",tostring(time()))
-    else LT:Act("AUTH",who,"yes",tostring(time())) end
-  end)
+  if not LT:IsGuildLeader(LT:SelfName()) then LT:Notice("Only the Guild Master or designated administrator can manage Officer permissions."); return end
+  detail:Hide(); permissionsPanel:Show(); permissionSearch:SetText(""); drawPermissions()
 end
 button(panel,"Officer permissions",525,-520,130,managePermissions)
 function LT:Draw()
