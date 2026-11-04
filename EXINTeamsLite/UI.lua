@@ -21,7 +21,7 @@ local function ask(prompt,default,callback)
   StaticPopup_Show("EXIN_LITE_INPUT")
 end
 label(panel,"|cff9bdd00EXIN TEAMS LITE|r",22,-20,350,"GameFontNormalLarge")
-label(panel,"Roster management • shared with EXIN Teams Full",22,-45,500,"GameFontHighlightSmall")
+label(panel,"Guild team and roster management",22,-45,500,"GameFontHighlightSmall")
 button(panel,"Close",665,-18,70,function() panel:Hide() end)
 local search=CreateFrame("EditBox",nil,panel,"InputBoxTemplate")
 search:SetSize(220,24); search:SetPoint("TOPLEFT",22,-78); search:SetAutoFocus(false); search:SetTextInsets(5,5,2,2)
@@ -31,6 +31,42 @@ local detail=CreateFrame("Frame",nil,panel); detail:SetPoint("TOPLEFT",270,-75);
 local teamButtons,memberRows={},{}
 local title=label(detail,"Select a team",0,0,430,"GameFontNormalLarge")
 local meta=label(detail,"",0,-28,430,"GameFontHighlightSmall")
+local emblemButton=button(detail,"Choose team emblem",0,-50,145,function()
+  if not LT:CanManage(chosen(),LT:SelfName()) then return end
+  emblemPicker:SetShown(not emblemPicker:IsShown())
+end)
+local emblemPicker=CreateFrame("Frame",nil,detail,"BackdropTemplate")
+emblemPicker:SetPoint("TOPLEFT",0,-80); emblemPicker:SetSize(238,190)
+emblemPicker:SetFrameStrata("DIALOG")
+emblemPicker:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",edgeFile="Interface\\Tooltips\\UI-Tooltip-Border",edgeSize=12,insets={left=3,right=3,top=3,bottom=3}})
+emblemPicker:SetBackdropColor(0.025,0.035,0.05,0.98)
+emblemPicker:Hide()
+local pickerTitle=label(emblemPicker,"SELECT TEAM EMBLEM",8,-8,210,"GameFontNormal")
+local emblemChoices={}
+for i,entry in ipairs(LT.emblems) do
+  local b=CreateFrame("Button",nil,emblemPicker,"UIPanelButtonTemplate")
+  b:SetSize(34,27)
+  local col=(i-1)%6; local row=math.floor((i-1)/6)
+  b:SetPoint("TOPLEFT",8+col*37,-30-row*29)
+  b.icon=b:CreateFontString(nil,"OVERLAY","GameFontNormalLarge")
+  b.icon:SetPoint("CENTER")
+  b.icon:SetText("|cff"..entry.hex.."✕|r")
+  b.entry=entry
+  b:SetScript("OnEnter",function(self)
+    GameTooltip:SetOwner(self,"ANCHOR_RIGHT"); GameTooltip:SetText(self.entry.name.." ("..self.entry.id..")"); GameTooltip:Show()
+  end)
+  b:SetScript("OnLeave",GameTooltip_Hide)
+  b:SetScript("OnClick",function(self)
+    local team=chosen()
+    if team and LT:CanManage(team,LT:SelfName()) then LT:Act("EMBLEM",team.id,self.entry.id) end
+    emblemPicker:Hide()
+  end)
+  emblemChoices[i]=b
+end
+local function emblemText(team)
+  local e=LT:Emblem(team and team.emblem or "E01")
+  return "|cff"..e.hex.."✕|r"
+end
 local function sortedTeams()
   local t={}; for _,v in pairs(LT.teams) do table.insert(t,v) end
   table.sort(t,function(a,b) return (a.name or "")<(b.name or "") end); return t
@@ -48,7 +84,7 @@ local function addTeam()
     name=(name or ""):match("^%s*(.-)%s*$")
     if #name<2 or #name>24 or name:find("[|\r\n]") then LT:Notice("Team name must be 2–24 characters."); return end
     local id=LT:SelfName().."-"..time().."-"..math.floor(GetTime()*1000)%100000
-    LT:Act("NEW",id,name,"General","Welcome to "..name,LT:SelfName(),"White")
+    LT:Act("NEW",id,name,"General","Welcome to "..name,LT:SelfName(),"White","E01")
     if LT.teams[id] then LT.selected=id end
     LT:Draw()
   end)
@@ -134,12 +170,14 @@ function LT:Draw()
   for _,t in ipairs(teams) do if query=="" or t.name:lower():find(query,1,true) then table.insert(visible,t) end end
   for i,t in ipairs(visible) do
     if not teamButtons[i] then teamButtons[i]=button(teamList,"",0,-(i-1)*28,220,function(b) LT.selected=b.teamID; LT:Draw() end) end
-    local b=teamButtons[i]; b.teamID=t.id; b:SetText((LT.selected==t.id and "» " or "")..t.name.." ("..tostring((function() local n=0; for _ in pairs(t.members or {}) do n=n+1 end; return n end)())..")")
+    local b=teamButtons[i]; b.teamID=t.id; b:SetText(emblemText(t).." "..(LT.selected==t.id and "» " or "")..t.name.." ("..tostring((function() local n=0; for _ in pairs(t.members or {}) do n=n+1 end; return n end)())..")")
     b:ClearAllPoints(); b:SetPoint("TOPLEFT",0,-(i-1)*28); b:Show()
   end
   local team=chosen()
   if not team and visible[1] then self.selected=visible[1].id; team=visible[1] end
-  title:SetText(team and team.name or "No teams available")
+  title:SetText(team and (emblemText(team).." "..team.name) or "No teams available")
+  emblemButton:SetShown(team~=nil and self:CanManage(team,self:SelfName()))
+  if not team then emblemPicker:Hide() end
   meta:SetText(team and ("Leader: "..memberDisplay(team.owner).."   •   Focus: "..(team.focus or "General").."   •   "..(team.motd or "")) or
     "An authorized Officer can create the first team.")
   for _,r in ipairs(memberRows) do r:Hide() end
@@ -169,8 +207,6 @@ function LT:Draw()
   end
 end
 search:SetScript("OnEscapePressed",function(self) self:ClearFocus() end)
-
-SlashCmdList.EXINTEAMLITE = function() LT:Toggle() end
 
 SLASH_EXINTEAMLITE1 = "/exin"
 SlashCmdList.EXINTEAMLITE = function() LT:Toggle() end
