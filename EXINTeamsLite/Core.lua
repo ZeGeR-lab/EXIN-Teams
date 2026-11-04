@@ -240,15 +240,18 @@ local function apply(op,f,actor)
   if not team then return false end
   if op=="SYNC" then
     if (actor~=team.owner and not LT:IsGuildOfficer(actor)) or not valid(f[3],24) or not valid(f[4],48) or not validOptional(f[5],150) then return false end
-    team.name,team.focus,team.motd,team.color=f[3],f[4],f[5],color(f[6]); team.emblem=emblemId(f[7] or team.emblem)
+    local incomingOwner,ownerRevision
     if f[8] then
-      local incomingOwner=norm(f[8])
-      local ownerRevision=tonumber(f[9]) or 0
+      incomingOwner=norm(f[8])
+      ownerRevision=tonumber(f[9]) or 0
       if not LT.roster[incomingOwner] then return false end
+      if incomingOwner~=team.owner and
+        (not LT:IsGuildOfficer(actor) or ownerRevision<=(tonumber(team.ownerChangedAt) or 0)) then return false end
+    end
+    -- Validate the complete snapshot before mutating any team fields.
+    team.name,team.focus,team.motd,team.color=f[3],f[4],f[5],color(f[6]); team.emblem=emblemId(f[7] or team.emblem)
+    if incomingOwner then
       if incomingOwner~=team.owner then
-        -- Only a trusted guild officer may reconcile ownership, and only with
-        -- a revision newer than the last locally accepted transfer.
-        if not LT:IsGuildOfficer(actor) or ownerRevision<=(tonumber(team.ownerChangedAt) or 0) then return false end
         setTeamOwner(team,incomingOwner)
         team.ownerChangedAt=ownerRevision
       elseif ownerRevision>(tonumber(team.ownerChangedAt) or 0) then
