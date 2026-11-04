@@ -1,0 +1,9 @@
+## Interface: 16001
+## Title: EXIN Teams Lite
+## Notes: Lightweight guild team and roster management for Ex Inferno
+## Author: ZeGeR-lab
+## Version: 0.1.0
+## SavedVariables: EXINTeamsLiteDB
+Core.lua
+UI.lua
+Minimap.lua
