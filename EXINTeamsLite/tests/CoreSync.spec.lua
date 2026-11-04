@@ -53,6 +53,10 @@ receive("SYNC|team1|Team Alpha|General||Blue|E01|member-aeriepeak|150","Officer-
 assert(LT.teams.team1.owner=="member-aeriepeak","trusted newer ownership snapshot should reconcile")
 assert(LT.teams.team1.members["member-aeriepeak"]=="leader","new owner must receive Leader role")
 assert(LT.teams.team1.members["oldmember-aeriepeak"]=="officer","previous owner Leader role should be demoted")
+-- A non-Officer team owner may sync team data but cannot forge a future ownership revision.
+receive("SYNC|team1|Team Alpha|General||Blue|E01|member-aeriepeak|999999999|0|member-aeriepeak|zzz-aeriepeak","Member-AeriePeak")
+assert(LT.teams.team1.ownerChangedAt==150,"team owner must not advance the ownership revision through SYNC")
+assert(LT.teams.team1.ownerChangedBy=="officer-aeriepeak","team owner must not forge the recorded ownership-change actor")
 receive("SYNC|team1|Old Team|General||Blue|E01|oldmember-aeriepeak|140","Officer-AeriePeak")
 assert(LT.teams.team1.owner=="member-aeriepeak","stale ownership snapshot must not roll back owner")
 assert(LT.teams.team1.name=="Team Alpha","rejected stale snapshot must not partially overwrite metadata")
