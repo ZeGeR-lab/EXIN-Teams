@@ -1,6 +1,6 @@
 local ADDON, LT = ...
 _G.EXINTeamsLite = LT
-LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.5.28"
+LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.5.29"
 LT.PREFIX = "EXINL1" -- Dedicated Lite channel; avoids collisions with the private Full edition.
 LT.teams, LT.roster, LT.authorizedOfficers = {}, {}, {}
 LT.selected, LT.db = nil, nil
@@ -59,6 +59,23 @@ local frame = CreateFrame("Frame")
 local function trim(s) return (s or ""):match("^%s*(.-)%s*$") end
 local function norm(s) return trim(s):lower():gsub("%s+","-") end
 local function guild() return GetGuildInfo("player") end
+local function guildStorageKey(name)
+  local realm=GetRealmName and GetRealmName() or ""
+  realm=trim(realm)
+  if realm=="" then realm="UnknownRealm" end
+  return tostring(name).."@"..realm
+end
+local activeGuildKey
+local function clearGuildRuntime()
+  LT.teams={}
+  LT.roster={}
+  LT.authorizedOfficers={}
+  LT.deleted={}
+  LT.selected=nil
+  LT.db=nil
+  activeGuildKey=nil
+  LT:Refresh()
+end
 local function selfName()
   local name, realm
   if UnitFullName then name, realm = UnitFullName("player") else name = UnitName("player") end
@@ -413,13 +430,27 @@ local function syncTeams()
 end
 function LT:OpenGuild()
   local g=guild()
-  if not g then self:Notice("Join a guild before opening Lite."); return false end
+  if not g then
+    clearGuildRuntime()
+    self:Notice("Join a guild before opening Lite.")
+    return false
+  end
   EXINTeamsLiteDB=EXINTeamsLiteDB or {}
-  EXINTeamsLiteDB[g]=EXINTeamsLiteDB[g] or {}
-  self.db=EXINTeamsLiteDB[g]
+  local key=guildStorageKey(g)
+  if not EXINTeamsLiteDB[key] and EXINTeamsLiteDB[g] then
+    -- Migrate the pre-realm-keyed save once; leaving the legacy key behind
+    -- would let a second realm with the same guild name inherit that data.
+    EXINTeamsLiteDB[key]=EXINTeamsLiteDB[g]
+    EXINTeamsLiteDB[g]=nil
+  end
+  EXINTeamsLiteDB[key]=EXINTeamsLiteDB[key] or {}
+  if activeGuildKey~=key then self.selected=nil end
+  activeGuildKey=key
+  self.db=EXINTeamsLiteDB[key]
   self.teams=self.db.teams or {}; self.authorizedOfficers=self.db.authorizedOfficers or {}
   self.deleted=self.db.deleted or {}
   self.db.teams=self.teams; self.db.authorizedOfficers=self.authorizedOfficers; self.db.deleted=self.deleted
+  wipe(self.roster)
   if C_GuildInfo and C_GuildInfo.GuildRoster then C_GuildInfo.GuildRoster() elseif GuildRoster then GuildRoster() end
   rosterRefresh()
   return true
@@ -443,7 +474,8 @@ frame:SetScript("OnEvent",function(_,event,...)
     LT:OpenGuild()
     C_Timer.After(4,function() LT:CheckConnection() end)
   elseif event=="PLAYER_GUILD_UPDATE" then LT:OpenGuild()
-  elseif event=="GUILD_ROSTER_UPDATE" then rosterRefresh()
+  elseif event=="GUILD_ROSTER_UPDATE" then
+    if not guild() then clearGuildRuntime() else rosterRefresh() end
   elseif event=="CHAT_MSG_ADDON" then
     local prefix,message,channel,sender=...
     if prefix~=LT.PREFIX or (channel~="GUILD" and channel~="WHISPER") or type(message)~="string" or #message>240 then return end
