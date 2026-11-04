@@ -157,8 +157,8 @@ local function drawRoster()
     row.teams:SetText(teamMembershipSummary(who))
     row.action.member=who
     local inTeam=team and team.members and team.members[who]
-    row.action:SetText(inTeam and "Remove" or "Add")
-    row.action:SetEnabled(team~=nil and LT:CanManage(team,LT:SelfName()))
+    row.action:SetText(who==team.owner and "Owner" or (inTeam and "Remove" or "Add"))
+    row.action:SetEnabled(team~=nil and who~=team.owner and LT:CanManage(team,LT:SelfName()))
     row.action:Show(); row:Show()
   end
 end
