@@ -36,6 +36,7 @@ local function newClient(name)
   local env={}
   setmetatable(env,{__index=_G})
   env._G=env
+  client.env=env
   env.EXINTeamsLiteDB=client.saved
   env.CreateFrame=function()
     local frame={}
