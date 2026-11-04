@@ -166,4 +166,14 @@ assert(LT.roster["zzz-aeriepeak"].discordName=="Discord - Zzz","Discord names co
 LT.teams.team2.motd="Message to clear"
 LT:Act("MOTD","team2","")
 assert(LT.teams.team2.motd=="","local team manager action should be able to clear the message")
+
+-- A temporarily empty guild roster must not leave stale identities or permissions active.
+local completeRoster=roster
+roster={}
+captured(nil,"GUILD_ROSTER_UPDATE")
+assert(next(LT.roster)==nil,"empty guild roster window must clear cached roster identities")
+assert(not LT:IsGuildOfficer("Officer-AeriePeak"),"empty guild roster window must disable cached Officer permissions")
+roster=completeRoster
+captured(nil,"GUILD_ROSTER_UPDATE")
+assert(LT:IsGuildOfficer("Officer-AeriePeak"),"valid roster refresh should restore the designated Officer permission")
 print("CoreSync.spec.lua: all synchronization and permission tests passed")
