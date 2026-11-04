@@ -72,8 +72,11 @@ receive("SYNC|team1|Stale Snapshot|General||Red|E02|member-aeriepeak|150|5","Off
 assert(LT.teams.team1.name=="Leader Rename","older reconnect snapshot must not roll back newer team metadata")
 receive("NAME|team1|Stale Rename|9","OldMember-AeriePeak")
 assert(LT.teams.team1.name=="Leader Rename","older metadata revision must not overwrite a newer edit")
-receive("MOTD|team1|Current message|10","Officer-AeriePeak")
-receive("MOTD|team1|Stale message|9","Officer-AeriePeak")
+receive("NAME|team1|Tie Winner|11","Snoop Wharg-AeriePeak")
+receive("NAME|team1|Tie Loser|11","OldMember-AeriePeak")
+assert(LT.teams.team1.name=="Tie Winner","same-second metadata edits should resolve consistently by actor identity")
+receive("MOTD|team1|Current message|12","Officer-AeriePeak")
+receive("MOTD|team1|Stale message|11","Officer-AeriePeak")
 assert(LT.teams.team1.motd=="Current message","stale team message must not overwrite newer message")
 receive("DEL|team1","OldMember-AeriePeak")
 assert(LT.teams.team1~=nil,"Team Leader must not be allowed to delete a team")
@@ -84,7 +87,7 @@ assert(LT.authorizedOfficers["member-aeriepeak"].revoked,"Guild Master should be
 
 -- Ordinary members cannot manage team metadata or perform Officer-only deletion.
 receive("NAME|team1|Unauthorized Rename","Random-AeriePeak")
-assert(LT.teams.team1.name=="Leader Rename","ordinary member must not rename a team")
+assert(LT.teams.team1.name=="Tie Winner","ordinary member must not rename a team")
 receive("DEL|team1","Random-AeriePeak")
 assert(LT.teams.team1~=nil,"ordinary member must not delete a team")
 
