@@ -1,0 +1,27 @@
+name: Lite Lua validation
+
+on:
+  push:
+    branches: [lite-development]
+    paths:
+      - 'EXINTeamsLite/**'
+      - '.github/workflows/lua-check.yml'
+  pull_request:
+    branches: [lite-development]
+    paths:
+      - 'EXINTeamsLite/**'
+      - '.github/workflows/lua-check.yml'
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua 5.1
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.1
+      - name: Validate Lua syntax
+        run: |
+          luac5.1 -p EXINTeamsLite/Core.lua
+          luac5.1 -p EXINTeamsLite/UI.lua
