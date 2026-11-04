@@ -28,7 +28,7 @@ search:SetSize(220,24); search:SetPoint("TOPLEFT",22,-78); search:SetAutoFocus(f
 search:SetScript("OnTextChanged",function() LT:Draw() end)
 local teamList=CreateFrame("Frame",nil,panel); teamList:SetPoint("TOPLEFT",20,-115); teamList:SetSize(235,405)
 local detail=CreateFrame("Frame",nil,panel); detail:SetPoint("TOPLEFT",270,-75); detail:SetSize(465,465)
-local teamButtons,memberRows={},{}
+local teamButtons,memberRows,settingsButtons={},{},{}
 local title=label(detail,"Select a team",0,0,430,"GameFontNormalLarge")
 local meta=label(detail,"",0,-28,430,"GameFontHighlightSmall")
 local chosen, emblemPicker
@@ -207,7 +207,7 @@ local function drawPermissions()
     end
     local row=permissionRows[i]; row:ClearAllPoints(); row:SetPoint("TOPLEFT",0,-(i-1)*30)
     local m=LT.roster[who]
-    local isOfficer=LT.authorizedOfficers[who]~=nil
+    local isOfficer=LT.authorizedOfficers[who]~=nil and not LT.authorizedOfficers[who].revoked
     row.name:SetText((m.online and "|cff44dd77●|r " or "|cff888888○|r ")..(m.name or who))
     row.action.member=who
     row.action:SetText(isOfficer and "Revoke Officer" or "Make Officer")
@@ -248,9 +248,9 @@ function LT:Draw()
   for _,r in ipairs(memberRows) do r:Hide() end
   if team then
     local canManage=self:CanManage(team,self:SelfName())
-    if not team.settingsButtons then
-      team.settingsButtons={}
-      team.settingsButtons.rename=button(detail,"Rename",0,-450,75,function()
+    if not settingsButtons[team.id] then
+      settingsButtons[team.id]={}
+      settingsButtons[team.id].rename=button(detail,"Rename",0,-450,75,function()
         local t=chosen(); if t and LT:CanManage(t,LT:SelfName()) then
           ask("New team name (2–24 characters)",t.name,function(value)
             value=(value or ""):match("^%s*(.-)%s*$")
@@ -258,7 +258,7 @@ function LT:Draw()
           end)
         end
       end)
-      team.settingsButtons.focus=button(detail,"Set focus",82,-450,82,function()
+      settingsButtons[team.id].focus=button(detail,"Set focus",82,-450,82,function()
         local t=chosen(); if t and LT:CanManage(t,LT:SelfName()) then
           ask("Team focus / category",t.focus or "General",function(value)
             value=(value or ""):match("^%s*(.-)%s*$")
@@ -266,7 +266,7 @@ function LT:Draw()
           end)
         end
       end)
-      team.settingsButtons.motd=button(detail,"Set message",170,-450,95,function()
+      settingsButtons[team.id].motd=button(detail,"Set message",170,-450,95,function()
         local t=chosen(); if t and LT:CanManage(t,LT:SelfName()) then
           ask("Team message (max 150 characters)",t.motd or "",function(value)
             value=(value or ""):match("^%s*(.-)%s*$")
@@ -274,7 +274,7 @@ function LT:Draw()
           end)
         end
       end)
-      team.settingsButtons.transfer=button(detail,"Transfer owner",271,-450,112,function()
+      settingsButtons[team.id].transfer=button(detail,"Transfer owner",271,-450,112,function()
         local t=chosen(); if not t or not LT:IsGuildOfficer(LT:SelfName()) then return end
         ask("Transfer ownership to which guild character?", "",function(value)
           local who=(value or ""):lower():gsub("^%s*(.-)%s*$","%1"):gsub("%s+","-")
@@ -287,8 +287,8 @@ function LT:Draw()
         end)
       end)
     end
-    for _,control in pairs(team.settingsButtons) do control:SetShown(canManage) end
-    team.settingsButtons.transfer:SetShown(self:IsGuildOfficer(self:SelfName()))
+    for _,control in pairs(settingsButtons[team.id]) do control:SetShown(canManage) end
+    settingsButtons[team.id].transfer:SetShown(self:IsGuildOfficer(self:SelfName()))
     for i,who in ipairs(sortedMembers(team)) do
       if not memberRows[i] then
         local row=CreateFrame("Frame",nil,detail); row:SetSize(440,25)
