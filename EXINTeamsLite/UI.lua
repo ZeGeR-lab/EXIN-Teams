@@ -89,6 +89,12 @@ local function addTeam()
   ask("New team name (2–24 characters)","",function(name)
     name=(name or ""):match("^%s*(.-)%s*$")
     if #name<2 or #name>24 or name:find("[|\r\n]") then LT:Notice("Team name must be 2–24 characters."); return end
+    for _,existing in pairs(LT.teams) do
+      if (existing.name or ""):lower()==name:lower() then
+        LT:Notice("A team with that name already exists. Team names must be unique.")
+        return
+      end
+    end
     local id=LT:SelfName().."-"..time().."-"..math.floor(GetTime()*1000)%100000
     LT:Act("NEW",id,name,"General","Welcome to "..name,LT:SelfName(),"White","E01")
     if LT.teams[id] then LT.selected=id end
