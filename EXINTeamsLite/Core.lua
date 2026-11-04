@@ -307,8 +307,8 @@ local function apply(op,f,actor)
     team.name=f[3]; team.metaChangedAt=revision; save()
   elseif op=="MOTD" then
     local revision=tonumber(f[4])
-    if not LT:CanManage(team,actor) or not valid(f[3],150) or not revision or revision<=(tonumber(team.metaChangedAt) or 0) then return false end
-    team.motd=f[3]; team.metaChangedAt=revision; save()
+    if not LT:CanManage(team,actor) or not valid(f[3],150) or not revision or revision<(tonumber(team.metaChangedAt) or 0) then return false end
+    team.motd=f[3]; team.metaChangedAt=math.max(revision,tonumber(team.metaChangedAt) or 0); save()
   elseif op=="FOCUS" then
     local revision=tonumber(f[4])
     if not LT:CanManage(team,actor) or not valid(f[3],48) or not revision or revision<=(tonumber(team.metaChangedAt) or 0) then return false end
@@ -359,8 +359,8 @@ local function syncTeams()
       -- Keep metadata packets small; MOTD travels separately so long messages
       -- cannot silently exceed the addon-message size limit during reconnect sync.
       send("NEW",id,team.name,team.focus or "General","",team.owner,team.color or "White",team.emblem or "E01")
-      send("SYNC",id,team.name,team.focus or "General",team.motd or "",team.color or "White",team.emblem or "E01",team.owner,tostring(team.ownerChangedAt or 0),tostring(team.metaChangedAt or 0))
-      if team.motd and team.motd~="" then send("MOTD",id,team.motd) end
+      send("SYNC",id,team.name,team.focus or "General","",team.color or "White",team.emblem or "E01",team.owner,tostring(team.ownerChangedAt or 0),tostring(team.metaChangedAt or 0))
+      if team.motd and team.motd~="" then send("MOTD",id,team.motd,tostring(team.metaChangedAt or 0)) end
       send("RCLR",id)
       for who,role in pairs(team.members or {}) do send("ROSTER",id,who,role) end
     end
