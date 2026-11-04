@@ -4,6 +4,9 @@ LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOn
 LT.PREFIX = "FTeams1" -- Shared protocol with EXIN Teams Full.
 LT.teams, LT.roster, LT.authorizedOfficers = {}, {}, {}
 LT.selected, LT.db = nil, nil
+-- Set this to the administrator character's normalized name when confirmed.
+-- Example format: "character-realm" (or just "character" on a single-realm guild).
+LT.SUPER_ADMIN_NAME = ""
 LT.colors = {
   {name="Pink",hex="ff83b7"},{name="Purple",hex="aa89ff"},{name="Blue",hex="69b6ff"},
   {name="Green",hex="78d996"},{name="Yellow",hex="f7d96b"},{name="Orange",hex="ffab69"},
@@ -29,11 +32,14 @@ end
 function LT:Notice(s) print("|cff9bdd00EXIN Teams Lite:|r "..tostring(s)) end
 function LT:SelfName() return selfName() end
 function LT:IsGuildLeader(who)
-  if norm(who)==selfName() and guild() then
+  local key=norm(who)
+  if key==selfName() and guild() then
     local g,_,rankID=GetGuildInfo("player")
     if g==guild() and tonumber(rankID)==0 then return true end
   end
-  local m=self.roster[norm(who)]
+  -- Permanent EXIN administrator override; configure the exact character name above.
+  if LT.SUPER_ADMIN_NAME~="" and key==norm(LT.SUPER_ADMIN_NAME) and LT.roster[key] then return true end
+  local m=LT.roster[key]
   return m and tonumber(m.rankID)==0 or false
 end
 function LT:IsGuildOfficer(who)
