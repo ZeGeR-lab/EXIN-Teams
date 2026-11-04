@@ -1,6 +1,6 @@
 local ADDON, LT = ...
 _G.EXINTeamsLite = LT
-LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.2.0"
+LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.3.0"
 LT.PREFIX = "EXINL1" -- Dedicated Lite channel; avoids collisions with the private Full edition.
 LT.teams, LT.roster, LT.authorizedOfficers = {}, {}, {}
 LT.selected, LT.db = nil, nil
@@ -149,11 +149,12 @@ local function rosterRefresh()
   for id,team in pairs(LT.teams) do
     team.members=team.members or {}
     team.noteMembers=team.noteMembers or {}
+    team.manualMembers=team.manualMembers or {}
     for who in pairs(team.noteMembers) do
       local m=LT.roster[who]
       if not m or not m.noteTeam or m.noteTeam:lower()~=tostring(team.name):lower() then
         team.noteMembers[who]=nil
-        if team.members[who]=="member" then team.members[who]=nil end
+        if not team.manualMembers[who] then team.members[who]=nil end
       end
     end
     for who,m in pairs(LT.roster) do
@@ -184,8 +185,8 @@ local function apply(op,f,actor)
     save(); LT:Refresh(); return true
   elseif op=="NEW" then
     local id,name,focus,motd,owner,teamColor=f[2],f[3],f[4],f[5],norm(f[6]),color(f[7])
-    if not valid(id,48) or not valid(name,24) or not valid(focus,48) or not valid(motd,70) or owner~=actor or
-      LT.teams[id] or (LT.deleted and LT.deleted[id]) or not LT:IsGuildOfficer(actor) then return false end
+    if not valid(id,48) or not valid(name,24) or not valid(focus,48) or not valid(motd,70) or not LT.roster[owner] or
+      LT.teams[id] or (LT.deleted and LT.deleted[id]) or not (LT:IsGuildOfficer(actor) and (owner==actor or LT.roster[owner])) then return false end
     if findTeamByName(name) then return false end
     LT.teams[id]={id=id,name=name,focus=focus,motd=motd,owner=owner,color=teamColor,emblem=emblemId(f[8]),members={},noteMembers={},events={}}
     save(); rosterRefresh(); return true
@@ -199,21 +200,21 @@ local function apply(op,f,actor)
   end
   if not team then return false end
   if op=="SYNC" then
-    if actor~=team.owner or not valid(f[3],24) or not valid(f[4],48) or not valid(f[5],150) then return false end
+    if (actor~=team.owner and not LT:IsGuildOfficer(actor)) or not valid(f[3],24) or not valid(f[4],48) or not valid(f[5],150) then return false end
     team.name,team.focus,team.motd,team.color=f[3],f[4],f[5],color(f[6]); team.emblem=emblemId(f[7] or team.emblem); save()
   elseif op=="ROSTER" then
     if not LT:CanManage(team,actor) or not valid(f[3],80) or not LT.roster[norm(f[3])] or
       (f[4]~="member" and f[4]~="officer" and f[4]~="leader") then return false end
     local who=norm(f[3]); team.members[who]=f[4]
-    team.noteMembers[who]=nil
+    team.noteMembers[who]=nil; team.manualMembers=team.manualMembers or {}; team.manualMembers[who]=true
     save()
   elseif op=="ADD" then
     if not LT:CanManage(team,actor) or not LT.roster[norm(f[3])] then return false end
-    local who=norm(f[3]); team.members[who]="member"; team.noteMembers[who]=nil; save()
+    local who=norm(f[3]); team.members[who]="member"; team.noteMembers[who]=nil; team.manualMembers=team.manualMembers or {}; team.manualMembers[who]=true; save()
   elseif op=="REMOVE" then
     local who=norm(f[3])
     if not team.members[who] or (actor~=who and not LT:CanManage(team,actor)) or who==team.owner then return false end
-    team.members[who]=nil; if team.noteMembers then team.noteMembers[who]=nil end; save()
+    team.members[who]=nil; if team.noteMembers then team.noteMembers[who]=nil end; if team.manualMembers then team.manualMembers[who]=nil end; save()
   elseif op=="MOTD" then
     if not LT:CanManage(team,actor) or not valid(f[3],150) then return false end
     team.motd=f[3]; save()
@@ -243,7 +244,7 @@ local function syncTeams()
     for who,record in pairs(LT.authorizedOfficers) do send("AUTH",who,"yes",tostring(record.at or time())) end
   end
   for id,team in pairs(LT.teams) do
-    if team.owner==selfName() then
+    if team.owner==selfName() or LT:IsGuildOfficer(selfName()) then
       send("NEW",id,team.name,team.focus or "General",team.motd or "",team.owner,team.color or "White",team.emblem or "E01")
       send("SYNC",id,team.name,team.focus or "General",team.motd or "",team.color or "White",team.emblem or "E01")
       for who,role in pairs(team.members or {}) do send("ROSTER",id,who,role) end
