@@ -280,6 +280,16 @@ function LT:Draw()
   meta:SetText(team and ("Leader: "..memberDisplay(team.owner).."   •   Focus: "..(team.focus or "General").."   •   "..(team.motd or "")) or
     "An authorized Officer can create the first team.")
   for _,r in ipairs(memberRows) do r:Hide() end
+  -- Controls are cached per team, but only the selected team's controls may remain visible.
+  -- Without clearing the previous team's buttons, changing selection leaves stale actions
+  -- stacked on top of the current team's controls.
+  for _,existing in pairs(self.teams) do
+    if existing.addButton then existing.addButton:Hide() end
+    if existing.deleteButton then existing.deleteButton:Hide() end
+  end
+  for _,controls in pairs(settingsButtons) do
+    for _,control in pairs(controls) do control:Hide() end
+  end
   if team then
     local canManage=self:CanManage(team,self:SelfName())
     if not settingsButtons[team.id] then
