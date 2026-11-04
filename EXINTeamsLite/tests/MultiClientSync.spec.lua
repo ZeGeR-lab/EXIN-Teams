@@ -91,6 +91,15 @@ flush()
 assert(snoop.LT.teams.crimson.name=="Crimson Raiders","owner metadata edit should replicate to admin")
 assert(member.LT.teams.crimson.name=="Crimson Raiders","owner metadata edit should persist locally")
 
+-- Empty team messages must synchronize as a real clear, not be ignored.
+member.LT:Act("MOTD","crimson","Recruiting now")
+flush()
+assert(snoop.LT.teams.crimson.motd=="Recruiting now","team message should replicate to admin")
+member.LT:Act("MOTD","crimson","")
+flush()
+assert(snoop.LT.teams.crimson.motd=="","cleared team message should replicate to admin")
+assert(member.LT.teams.crimson.motd=="","cleared team message should persist on owner")
+
 -- A remote roster edit must be reflected on both clients.
 member.LT:Act("ADD","crimson","Officer-AeriePeak")
 flush()
