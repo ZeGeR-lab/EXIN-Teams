@@ -26,7 +26,7 @@ local LT={}
 assert(loadfile("EXINTeamsLite/Core.lua"))("EXINTeamsLite",LT)
 LT:OpenGuild()
 assert(LT:IsGuildLeader("Snoop Wharg-AeriePeak"),"permanent admin override should resolve unique realm-qualified name")
-LT.authorizedOfficers["officer-aeriepeak"]={by="guildmaster-aeriepeak",at=200,revoked=true}
+LT.authorizedOfficers["member-aeriepeak"]={by="guildmaster-aeriepeak",at=200,revoked=true}
 local function receive(message,sender)
   captured(nil,"CHAT_MSG_ADDON",LT.PREFIX,message,"GUILD",sender)
 end
