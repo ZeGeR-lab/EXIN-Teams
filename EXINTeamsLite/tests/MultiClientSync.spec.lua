@@ -74,7 +74,7 @@ table.insert(clients,member)
 snoop.LT:Act("NEW","crimson","Team Crimson","Raid","","Member-AeriePeak","Blue","E01")
 flush()
 assert(snoop.LT.teams.crimson~=nil,"creator should have the new team")
-assert(member.LT.teams.crimson==nil,"team should not appear before a sync handshake")
+assert(member.LT.teams.crimson~=nil,"guild broadcast should deliver the new team to the connected client")
 
 -- Member reconnects; the authoritative admin responds with a complete snapshot.
 member.LT:CheckConnection()
