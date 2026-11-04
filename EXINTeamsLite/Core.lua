@@ -236,6 +236,20 @@ local function apply(op,f,actor)
     -- Repair legacy snapshots whose owner and Leader role have drifted apart.
     if team.owner and LT.roster[team.owner] then setTeamOwner(team,team.owner) end
     save()
+  elseif op=="RCLR" then
+    if not LT:CanManage(team,actor) then return false end
+    -- A reconnect snapshot is authoritative: clear stale manual entries before replaying roles.
+    team.members={}
+    team.manualMembers={}
+    if team.owner and LT.roster[team.owner] then
+      team.members[team.owner]="leader"
+      team.manualMembers[team.owner]=true
+    end
+    -- Keep noteMembers; rosterRefresh reconciles them against current guild notes.
+    for who in pairs(team.noteMembers or {}) do
+      if LT.roster[who] then team.members[who]=team.members[who] or "member" end
+    end
+    save()
   elseif op=="ROSTER" then
     if not LT:CanManage(team,actor) or not valid(f[3],80) or not LT.roster[norm(f[3])] or
       (f[4]~="member" and f[4]~="officer" and f[4]~="leader") then return false end
@@ -302,6 +316,7 @@ local function syncTeams()
       send("NEW",id,team.name,team.focus or "General","",team.owner,team.color or "White",team.emblem or "E01")
       send("SYNC",id,team.name,team.focus or "General","",team.color or "White",team.emblem or "E01",team.owner)
       if team.motd and team.motd~="" then send("MOTD",id,team.motd) end
+      send("RCLR",id)
       for who,role in pairs(team.members or {}) do send("ROSTER",id,who,role) end
     end
   end
