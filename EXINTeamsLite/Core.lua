@@ -213,7 +213,12 @@ local function apply(op,f,actor)
     -- Only the current guild master may alter the replicated authorization list.
     if not LT:IsGuildLeader(actor) or not LT.roster[norm(f[2])] or (f[3]~="yes" and f[3]~="no") then return false end
     local target=norm(f[2])
-    LT.authorizedOfficers[target]={by=actor,at=tonumber(f[4]) or time(),revoked=(f[3]=="no")}
+    local revision=tonumber(f[4])
+    if not revision or revision<=0 then return false end
+    local previous=LT.authorizedOfficers[target]
+    -- Ignore stale or duplicate snapshots so old grants cannot undo revocations.
+    if previous and revision<=(tonumber(previous.at) or 0) then return false end
+    LT.authorizedOfficers[target]={by=actor,at=revision,revoked=(f[3]=="no")}
     save(); LT:Refresh(); return true
   elseif op=="NEW" then
     local id,name,focus,motd,owner,teamColor=f[2],f[3],f[4],f[5],norm(f[6]),color(f[7])
