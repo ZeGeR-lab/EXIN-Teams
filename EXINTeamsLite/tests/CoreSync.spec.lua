@@ -113,4 +113,19 @@ receive("DEL|team1","Officer-AeriePeak")
 assert(LT.teams.team1==nil and LT.deleted.team1~=nil,"designated Officer should be allowed to delete a team")
 receive("NEW|team1|Resurrected Team|General||Random-AeriePeak|Blue|E01","Officer-AeriePeak")
 assert(LT.teams.team1==nil,"a deleted team must not be recreated from a stale NEW packet")
+
+-- Guild roster refresh removes manual memberships for characters who left the guild.
+receive("ROSTER|team2|Zzz-AeriePeak|officer","Officer-AeriePeak")
+assert(LT.teams.team2.members["zzz-aeriepeak"]=="officer","fixture should add a manual member")
+local savedRoster=roster
+roster={}
+for _,entry in ipairs(savedRoster) do
+  if entry[1]~="Zzz-AeriePeak" then table.insert(roster,entry) end
+end
+captured(nil,"GUILD_ROSTER_UPDATE")
+assert(LT.teams.team2.members["zzz-aeriepeak"]==nil,"guild leaver must be removed from the local team roster")
+assert(LT.teams.team2.manualMembers["zzz-aeriepeak"]==nil,"guild leaver manual-membership provenance must be pruned")
+roster=savedRoster
+captured(nil,"GUILD_ROSTER_UPDATE")
+assert(LT.teams.team2.members["zzz-aeriepeak"]==nil,"a returning character must not regain stale manual membership")
 print("CoreSync.spec.lua: all synchronization and permission tests passed")
