@@ -26,6 +26,7 @@ jobs:
           luac5.1 -p EXINTeamsLite/Core.lua
           luac5.1 -p EXINTeamsLite/UI.lua
           lua5.1 EXINTeamsLite/tests/CoreSync.spec.lua
+          lua5.1 EXINTeamsLite/tests/MultiClientSync.spec.lua
 
   package:
     needs: syntax
