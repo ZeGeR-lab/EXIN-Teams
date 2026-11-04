@@ -120,7 +120,7 @@ assert(snoop.LT.teams.crimson.owner=="officer-aeriepeak","transferring Officer s
 assert(snoop.LT.teams.crimson.members["officer-aeriepeak"]=="leader","new owner should receive Leader role")
 assert(snoop.LT.teams.crimson.members["member-aeriepeak"]=="officer","previous owner should be demoted to Officer")
 member.online=true
-member.env.C_ChatInfo.SendAddonMessage(member.LT.PREFIX,"HELLO|"..member.LT:SelfName(),"GUILD")
+member.env.C_ChatInfo.SendAddonMessage(member.LT.PREFIX,"Ex Inferno@AeriePeak|HELLO|"..member.LT:SelfName(),"GUILD")
 flush()
 assert(member.LT.teams.crimson.owner=="officer-aeriepeak","offline former owner should receive the new owner on reconnect")
 assert(member.LT.teams.crimson.members["officer-aeriepeak"]=="leader","reconnect snapshot should restore new owner Leader role")
@@ -151,7 +151,7 @@ flush()
 assert(snoop.LT.teams.crimson==nil and snoop.LT.deleted.crimson~=nil,"admin deletion should create a tombstone")
 local sentBeforeReconnect=#sent
 member.online=true
-member.env.C_ChatInfo.SendAddonMessage(member.LT.PREFIX,"HELLO|"..member.LT:SelfName(),"GUILD")
+member.env.C_ChatInfo.SendAddonMessage(member.LT.PREFIX,"Ex Inferno@AeriePeak|HELLO|"..member.LT:SelfName(),"GUILD")
 flush()
 local tombstoneReplay=false
 for i=sentBeforeReconnect+1,#sent do
