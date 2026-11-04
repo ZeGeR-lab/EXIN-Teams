@@ -111,17 +111,37 @@ snoop.LT:Act("AUTH","Officer-AeriePeak","yes","2100")
 flush()
 assert(member.LT:IsGuildOfficer("Officer-AeriePeak"),"authorized Officer status should replicate")
 
--- Guild-wide Officer ownership transfer must converge, and a stale owner snapshot must not roll it back.
+-- Ownership transfer while the former owner is offline must reconcile on reconnect.
+member.online=false
 snoop.LT:Act("TRANSFER","crimson","Officer-AeriePeak","2200")
 flush()
 assert(snoop.LT.teams.crimson.owner=="officer-aeriepeak","transferring Officer should become owner locally")
-assert(member.LT.teams.crimson.owner=="officer-aeriepeak","ownership transfer should replicate to connected clients")
 assert(snoop.LT.teams.crimson.members["officer-aeriepeak"]=="leader","new owner should receive Leader role")
 assert(snoop.LT.teams.crimson.members["member-aeriepeak"]=="officer","previous owner should be demoted to Officer")
+member.online=true
+member.env.C_ChatInfo.SendAddonMessage(member.LT.PREFIX,"HELLO|"..member.LT:SelfName(),"GUILD")
+flush()
+assert(member.LT.teams.crimson.owner=="officer-aeriepeak","offline former owner should receive the new owner on reconnect")
+assert(member.LT.teams.crimson.members["officer-aeriepeak"]=="leader","reconnect snapshot should restore new owner Leader role")
 local staleOwner="SYNC|crimson|Old Owner Snapshot|Raid||Blue|E01|member-aeriepeak|2199|0|"
 member.eventHandler(nil,"CHAT_MSG_ADDON",member.LT.PREFIX,staleOwner,"GUILD","Snoop Wharg-AeriePeak")
 assert(member.LT.teams.crimson.owner=="officer-aeriepeak","stale owner snapshot must not roll back a completed transfer")
 assert(member.LT.teams.crimson.name=="Crimson Raiders","rejected stale owner snapshot must not overwrite metadata")
+
+-- A replaced owner who leaves and later rejoins must not regain stale manual membership.
+member.online=false
+local beforeLeave=roster
+roster={}
+for _,entry in ipairs(beforeLeave) do if entry[1]~="Member-AeriePeak" then table.insert(roster,entry) end end
+snoop.eventHandler(nil,"GUILD_ROSTER_UPDATE")
+assert(snoop.LT.teams.crimson.owner=="officer-aeriepeak","former owner departure must not reverse the transfer")
+assert(snoop.LT.teams.crimson.members["member-aeriepeak"]==nil,"departing former owner must be removed from team membership")
+roster=beforeLeave
+snoop.eventHandler(nil,"GUILD_ROSTER_UPDATE")
+assert(snoop.LT.teams.crimson.owner=="officer-aeriepeak","former owner return must not reclaim ownership")
+assert(snoop.LT.teams.crimson.members["member-aeriepeak"]==nil,"former owner must not regain stale manual membership after returning")
+member.eventHandler(nil,"GUILD_ROSTER_UPDATE")
+member.online=true
 
 -- Simulate a disconnected client missing a deletion broadcast.
 member.online=false
