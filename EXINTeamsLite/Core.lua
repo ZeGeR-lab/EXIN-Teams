@@ -67,7 +67,16 @@ local function selfName()
 end
 local function isAdminIdentity(key)
   local admin=norm(LT.SUPER_ADMIN_NAME)
-  return admin~="" and (key==admin or key:sub(1,#admin+1)==admin.."-")
+  if admin=="" then return false end
+  -- A name-only setting may match a realm-qualified roster entry, but only
+  -- when exactly one guild character has that base name.
+  local match,count=nil,0
+  for rosterKey in pairs(LT.roster) do
+    if rosterKey==admin or rosterKey:sub(1,#admin+1)==admin.."-" then
+      match=rosterKey; count=count+1
+    end
+  end
+  return count==1 and match==key
 end
 local function setTeamOwner(team,newOwner)
   newOwner=norm(newOwner)
