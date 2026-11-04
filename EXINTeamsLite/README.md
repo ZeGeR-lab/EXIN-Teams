@@ -1,6 +1,6 @@
 # EXIN Teams Lite
 
-**Current version: 0.5.29**
+**Current version: 0.5.30**
 
 Lightweight guild team and roster management for Ex Inferno.
 
@@ -24,6 +24,7 @@ Lightweight guild team and roster management for Ex Inferno.
 - Edit or clear the team message; clearing it synchronizes to other clients.
 - Warn team managers that renaming a team does not automatically rewrite guild public notes.
 - Synchronize team metadata, membership, permissions, and deletions between online guild clients.
+- Scope every addon message to the active guild and realm; all guild clients must update to 0.5.30 together because this release uses a new synchronization prefix.
 
 ## Permissions
 
