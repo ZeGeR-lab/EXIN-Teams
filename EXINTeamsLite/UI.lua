@@ -107,6 +107,7 @@ local function removeMember(who)
     end)
   end
 end
+local permissionsPanel
 local rosterPanel=CreateFrame("Frame",nil,panel,"BackdropTemplate")
 rosterPanel:SetPoint("TOPLEFT",detail,"TOPLEFT",0,0); rosterPanel:SetSize(465,465)
 rosterPanel:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background"})
@@ -167,7 +168,7 @@ button(rosterPanel,"Back to teams",0,-420,120,function() rosterPanel:Hide(); det
 button(panel,"Guild roster",330,-520,110,function()
   detail:Hide(); permissionsPanel:Hide(); rosterPanel:Show(); rosterSearch:SetText(""); drawRoster()
 end)
-local permissionsPanel=CreateFrame("Frame",nil,panel,"BackdropTemplate")
+permissionsPanel=CreateFrame("Frame",nil,panel,"BackdropTemplate")
 permissionsPanel:SetPoint("TOPLEFT",detail,"TOPLEFT",0,0); permissionsPanel:SetSize(465,465)
 permissionsPanel:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background"})
 permissionsPanel:SetBackdropColor(0.025,0.035,0.05,0.98); permissionsPanel:Hide()
