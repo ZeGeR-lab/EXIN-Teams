@@ -216,7 +216,7 @@ local function apply(op,f,actor)
   end
   local id,team=f[2],LT.teams[f[2]]
   if op=="DEL" then
-    if not LT:IsGuildOfficer(actor) then return false end
+    if not valid(id,48) or not LT:IsGuildOfficer(actor) then return false end
     LT.deleted=LT.deleted or {}
     local tombstone=LT.deleted[id]
     LT.deleted[id]={by=actor,at=math.max(tonumber(tombstone and tombstone.at) or 0,time())}
