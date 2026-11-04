@@ -143,6 +143,24 @@ for _,client in ipairs(clients) do
   assert(client.LT.teams["a-team"].ownerChangedBy=="snoop-wharg-aeriepeak","winning transfer actor should be recorded consistently")
 end
 
+-- Simultaneous deletion by two Officers must remain idempotent and final.
+snoop.LT:Act("DEL","a-team")
+officerClient.LT:Act("DEL","a-team")
+flush()
+for _,client in ipairs(clients) do
+  assert(client.LT.teams["a-team"]==nil,"concurrent deletion must remove the team on every client")
+  assert(client.LT.deleted["a-team"]~=nil,"concurrent deletion must leave a durable tombstone")
+end
+-- Delayed snapshots and roster updates must never recreate a tombstoned team.
+local staleTeamSync="Ex Inferno@AeriePeak|SYNC|a-team|Restored Team|Raid||Blue|E01|member-aeriepeak|2300|0||snoop-wharg-aeriepeak"
+local staleTeamRoster="Ex Inferno@AeriePeak|ROSTER|a-team|officer-aeriepeak|leader"
+member.eventHandler(nil,"CHAT_MSG_ADDON",member.LT.PREFIX,staleTeamSync,"GUILD","Snoop Wharg-AeriePeak")
+member.eventHandler(nil,"CHAT_MSG_ADDON",member.LT.PREFIX,staleTeamRoster,"GUILD","Officer-AeriePeak")
+assert(member.LT.teams["a-team"]==nil,"delayed SYNC and ROSTER packets must not recreate a deleted team")
+local staleTeamNew="Ex Inferno@AeriePeak|NEW|a-team|Restored Team|Raid||Member-AeriePeak|Blue|E01"
+member.eventHandler(nil,"CHAT_MSG_ADDON",member.LT.PREFIX,staleTeamNew,"GUILD","Snoop Wharg-AeriePeak")
+assert(member.LT.teams["a-team"]==nil,"delayed NEW must not recreate a deleted team")
+
 -- Ownership transfer while the former owner is offline must reconcile on reconnect.
 member.online=false
 snoop.LT:Act("TRANSFER","crimson","Officer-AeriePeak","2200")
