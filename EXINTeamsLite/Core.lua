@@ -180,7 +180,7 @@ local function emit(channel,target,op,...)
   local fields={op,...}
   for _,v in ipairs(fields) do if type(v)~="string" or v:find("[|\r\n]") then return end end
   local scope=guildStorageKey(guild())
-  if scope:find("[|\\r\\n]") then return end
+  if scope:find("|",1,true) or scope:find("\r",1,true) or scope:find("\n",1,true) then return end
   local msg=scope.."|"..table.concat(fields,"|")
   if #msg>240 then LT:Notice("A sync packet was too large and was not sent."); return end
   if C_ChatInfo and C_ChatInfo.SendAddonMessage then C_ChatInfo.SendAddonMessage(LT.PREFIX,msg,channel,target)
