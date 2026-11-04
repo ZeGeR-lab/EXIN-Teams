@@ -100,6 +100,17 @@ flush()
 assert(snoop.LT.teams.crimson.motd=="","cleared team message should replicate to admin")
 assert(member.LT.teams.crimson.motd=="","cleared team message should persist on owner")
 
+-- A remote roster edit must be reflected on both clients.
+member.LT:Act("ADD","crimson","Officer-AeriePeak")
+flush()
+assert(snoop.LT.teams.crimson.members["officer-aeriepeak"]=="member","member addition should replicate to admin")
+assert(member.LT.teams.crimson.members["officer-aeriepeak"]=="member","member addition should persist locally")
+
+-- Guild Master authorization is replicated and grants guild-wide Officer access.
+snoop.LT:Act("AUTH","Officer-AeriePeak","yes","2100")
+flush()
+assert(member.LT:IsGuildOfficer("Officer-AeriePeak"),"authorized Officer status should replicate")
+
 -- Guild-wide Officer ownership transfer must converge, and a stale owner snapshot must not roll it back.
 snoop.LT:Act("TRANSFER","crimson","Officer-AeriePeak","2200")
 flush()
@@ -111,17 +122,6 @@ local staleOwner="SYNC|crimson|Old Owner Snapshot|Raid||Blue|E01|member-aeriepea
 member.eventHandler(nil,"CHAT_MSG_ADDON",member.LT.PREFIX,staleOwner,"GUILD","Snoop Wharg-AeriePeak")
 assert(member.LT.teams.crimson.owner=="officer-aeriepeak","stale owner snapshot must not roll back a completed transfer")
 assert(member.LT.teams.crimson.name=="Crimson Raiders","rejected stale owner snapshot must not overwrite metadata")
-
--- A remote roster edit must be reflected on both clients.
-member.LT:Act("ADD","crimson","Officer-AeriePeak")
-flush()
-assert(snoop.LT.teams.crimson.members["officer-aeriepeak"]=="member","member addition should replicate to admin")
-assert(member.LT.teams.crimson.members["officer-aeriepeak"]=="member","member addition should persist locally")
-
--- Guild Master authorization is replicated and grants guild-wide Officer access.
-snoop.LT:Act("AUTH","Officer-AeriePeak","yes","2100")
-flush()
-assert(member.LT:IsGuildOfficer("Officer-AeriePeak"),"authorized Officer status should replicate")
 
 -- Simulate a disconnected client missing a deletion broadcast.
 member.online=false
