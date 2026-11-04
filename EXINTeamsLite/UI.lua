@@ -200,7 +200,9 @@ local function drawPermissions()
       row.action=button(row,"",270,-1,115,function(b)
         if not LT:IsGuildLeader(LT:SelfName()) then LT:Notice("Only the Guild Master or designated administrator can change Officer access."); return end
         local target=b.member
-        LT:Act("AUTH",target,LT.authorizedOfficers[target] and "no" or "yes",tostring(time()))
+        local record=LT.authorizedOfficers[target]
+        local currentlyAuthorized=record~=nil and not record.revoked
+        LT:Act("AUTH",target,currentlyAuthorized and "no" or "yes",tostring(time()))
         drawPermissions()
       end)
       permissionRows[i]=row
