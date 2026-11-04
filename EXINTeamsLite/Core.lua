@@ -1,6 +1,6 @@
 local ADDON, LT = ...
 _G.EXINTeamsLite = LT
-LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.3.0"
+LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.4.0"
 LT.PREFIX = "EXINL1" -- Dedicated Lite channel; avoids collisions with the private Full edition.
 LT.teams, LT.roster, LT.authorizedOfficers = {}, {}, {}
 LT.selected, LT.db = nil, nil
@@ -217,6 +217,10 @@ local function apply(op,f,actor)
     local who=norm(f[3])
     if not team.members[who] or (actor~=who and not LT:CanManage(team,actor)) or who==team.owner then return false end
     team.members[who]=nil; if team.noteMembers then team.noteMembers[who]=nil end; if team.manualMembers then team.manualMembers[who]=nil end; save()
+  elseif op=="NAME" then
+    if not LT:CanManage(team,actor) or not valid(f[3],24) then return false end
+    local existing=findTeamByName(f[3]); if existing and existing~=id then return false end
+    team.name=f[3]; save()
   elseif op=="MOTD" then
     if not LT:CanManage(team,actor) or not valid(f[3],150) then return false end
     team.motd=f[3]; save()
@@ -243,7 +247,9 @@ end
 local function syncTeams()
   if not guild() then return end
   if LT:IsGuildLeader(selfName()) then
-    for who,record in pairs(LT.authorizedOfficers) do send("AUTH",who,"yes",tostring(record.at or time())) end
+    for who in pairs(LT.roster) do
+      send("AUTH",who,LT.authorizedOfficers[who] and "yes" or "no",tostring((LT.authorizedOfficers[who] and LT.authorizedOfficers[who].at) or time()))
+    end
   end
   for id,team in pairs(LT.teams) do
     if team.owner==selfName() or LT:IsGuildOfficer(selfName()) then
