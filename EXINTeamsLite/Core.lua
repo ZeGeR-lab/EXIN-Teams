@@ -92,6 +92,7 @@ function LT:IsGuildOfficer(who)
   return m~=nil and self.authorizedOfficers[key]~=nil
 end
 function LT:IsTeamLeader(who, team)
+  if team and team.members and team.members[norm(who)]=="leader" then return true end
   local m=self.roster[norm(who)]
   if not m or not m.noteTeam then return false end
   local rank=(m.rank or ""):lower()
@@ -201,9 +202,9 @@ local function apply(op,f,actor)
     if actor~=team.owner or not valid(f[3],24) or not valid(f[4],48) or not valid(f[5],150) then return false end
     team.name,team.focus,team.motd,team.color=f[3],f[4],f[5],color(f[6]); team.emblem=emblemId(f[7] or team.emblem); save()
   elseif op=="ROSTER" then
-    if actor~=team.owner or not valid(f[3],80) or not LT.roster[norm(f[3])] or
+    if not LT:CanManage(team,actor) or not valid(f[3],80) or not LT.roster[norm(f[3])] or
       (f[4]~="member" and f[4]~="officer" and f[4]~="leader") then return false end
-    local who=norm(f[3]); team.members[who]=f[4]=="leader" and "member" or f[4]
+    local who=norm(f[3]); team.members[who]=f[4]
     team.noteMembers[who]=nil
     save()
   elseif op=="ADD" then
