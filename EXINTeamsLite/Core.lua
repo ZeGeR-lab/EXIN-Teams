@@ -87,6 +87,7 @@ local function setTeamOwner(team,newOwner)
   return true
 end
 local function valid(s,n) return type(s)=="string" and #s>0 and #s<=n and not s:find("[|\r\n]") end
+local function validOptional(s,n) return type(s)=="string" and #s<=n and not s:find("[|\r\n]") end
 local function color(name)
   for _, c in ipairs(LT.colors) do if c.name:lower()==tostring(name or ""):lower() then return c.name end end
   return "White"
@@ -207,7 +208,7 @@ local function apply(op,f,actor)
     save(); LT:Refresh(); return true
   elseif op=="NEW" then
     local id,name,focus,motd,owner,teamColor=f[2],f[3],f[4],f[5],norm(f[6]),color(f[7])
-    if not valid(id,48) or not valid(name,24) or not valid(focus,48) or not valid(motd,70) or not LT.roster[owner] or
+    if not valid(id,48) or not valid(name,24) or not valid(focus,48) or not validOptional(motd,150) or not LT.roster[owner] or
       LT.teams[id] or (LT.deleted and LT.deleted[id]) or not (actor==owner or LT:IsGuildOfficer(actor)) then return false end
     if findTeamByName(name) then return false end
     LT.teams[id]={id=id,name=name,focus=focus,motd=motd,owner=owner,color=teamColor,emblem=emblemId(f[8]),members={[owner]="leader"},noteMembers={},manualMembers={[owner]=true},events={}}
@@ -215,23 +216,25 @@ local function apply(op,f,actor)
   end
   local id,team=f[2],LT.teams[f[2]]
   if op=="DEL" then
-    if not team or not LT:CanDelete(team,actor) then return false end
-    LT.deleted=LT.deleted or {}; LT.deleted[id]={by=actor,at=time()}
+    if not LT:IsGuildOfficer(actor) then return false end
+    LT.deleted=LT.deleted or {}
+    local tombstone=LT.deleted[id]
+    LT.deleted[id]={by=actor,at=math.max(tonumber(tombstone and tombstone.at) or 0,time())}
     LT.teams[id]=nil; if LT.selected==id then LT.selected=nil end
     save(); LT:Refresh(); return true
   end
   if not team then return false end
   if op=="SYNC" then
-    if (actor~=team.owner and not LT:IsGuildOfficer(actor)) or not valid(f[3],24) or not valid(f[4],48) or not valid(f[5],150) then return false end
+    if (actor~=team.owner and not LT:IsGuildOfficer(actor)) or not valid(f[3],24) or not valid(f[4],48) or not validOptional(f[5],150) then return false end
     team.name,team.focus,team.motd,team.color=f[3],f[4],f[5],color(f[6]); team.emblem=emblemId(f[7] or team.emblem)
     if f[8] then
       local incomingOwner=norm(f[8])
-      if not LT.roster[incomingOwner] then return false end
-      setTeamOwner(team,incomingOwner)
-    else
-      -- Repair legacy snapshots whose owner and Leader role have drifted apart.
-      if team.owner and LT.roster[team.owner] then setTeamOwner(team,team.owner) end
+      -- SYNC is a metadata snapshot, never an ownership-transfer command.
+      -- Ownership changes must arrive through the separately authorized TRANSFER op.
+      if incomingOwner~=team.owner or not LT.roster[incomingOwner] then return false end
     end
+    -- Repair legacy snapshots whose owner and Leader role have drifted apart.
+    if team.owner and LT.roster[team.owner] then setTeamOwner(team,team.owner) end
     save()
   elseif op=="ROSTER" then
     if not LT:CanManage(team,actor) or not valid(f[3],80) or not LT.roster[norm(f[3])] or
@@ -282,6 +285,10 @@ local function syncTeams()
     for who,record in pairs(LT.authorizedOfficers) do
       send("AUTH",who,record.revoked and "no" or "yes",tostring(record.at or time()))
     end
+  end
+  -- Replicate deletion tombstones so a returning client cannot resurrect an old team.
+  if LT:IsGuildOfficer(selfName()) then
+    for id in pairs(LT.deleted or {}) do send("DEL",id) end
   end
   for id,team in pairs(LT.teams) do
     if team.owner==selfName() or LT:IsGuildOfficer(selfName()) then
