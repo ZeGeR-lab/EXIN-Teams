@@ -182,7 +182,13 @@ local function leaderRankName(rank)
 end
 local function rosterRefresh()
   local total=GetNumGuildMembers and GetNumGuildMembers() or 0
-  if total==0 then LT:Refresh(); return end
+  if total==0 then
+    -- An empty roster can occur while WoW is loading guild data or after a guild change.
+    -- Never keep old roster identities available for permission checks during that gap.
+    wipe(LT.roster)
+    LT:Refresh()
+    return
+  end
   wipe(LT.roster)
   for i=1,total do
     local name,rank,rankID,level,class,_,note,_,online,_,_,_,_,_,_,_,guid=GetGuildRosterInfo(i)
