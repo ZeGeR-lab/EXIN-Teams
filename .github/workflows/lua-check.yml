@@ -25,3 +25,23 @@ jobs:
         run: |
           luac5.1 -p EXINTeamsLite/Core.lua
           luac5.1 -p EXINTeamsLite/UI.lua
+
+  package:
+    needs: syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Lite-only installation archive
+        run: |
+          VERSION=$(sed -n 's/^## Version: //p' EXINTeamsLite/EXINTeamsLite.toc)
+          mkdir -p package
+          cp -R EXINTeamsLite package/EXINTeamsLite
+          cd package
+          zip -r "EXINTeamsLite-${VERSION}.zip" EXINTeamsLite
+      - name: Upload installation archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: EXINTeamsLite-install
+          path: package/EXINTeamsLite-*.zip
+          if-no-files-found: error
+          retention-days: 30
