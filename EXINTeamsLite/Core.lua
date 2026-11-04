@@ -186,7 +186,7 @@ local function apply(op,f,actor)
   elseif op=="NEW" then
     local id,name,focus,motd,owner,teamColor=f[2],f[3],f[4],f[5],norm(f[6]),color(f[7])
     if not valid(id,48) or not valid(name,24) or not valid(focus,48) or not valid(motd,70) or not LT.roster[owner] or
-      LT.teams[id] or (LT.deleted and LT.deleted[id]) or not (LT:IsGuildOfficer(actor) and (owner==actor or LT.roster[owner])) then return false end
+      LT.teams[id] or (LT.deleted and LT.deleted[id]) or not (actor==owner or LT:IsGuildOfficer(actor)) then return false end
     if findTeamByName(name) then return false end
     LT.teams[id]={id=id,name=name,focus=focus,motd=motd,owner=owner,color=teamColor,emblem=emblemId(f[8]),members={},noteMembers={},events={}}
     save(); rosterRefresh(); return true
