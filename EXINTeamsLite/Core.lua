@@ -1,6 +1,6 @@
 local ADDON, LT = ...
 _G.EXINTeamsLite = LT
-LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.5.32"
+LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.5.33"
 LT.PREFIX = "EXINL2" -- Realm-scoped protocol; avoids Full collisions and rejects legacy unscoped packets.
 LT.teams, LT.roster, LT.authorizedOfficers = {}, {}, {}
 LT.selected, LT.db = nil, nil
@@ -333,8 +333,12 @@ local function apply(op,f,actor)
         setTeamOwner(team,incomingOwner)
         team.ownerChangedAt=ownerRevision
         team.ownerChangedBy=incomingOwnerActor
-      elseif ownerRevision>currentOwnerRevision or
-        (ownerRevision==currentOwnerRevision and incomingOwnerActor>currentOwnerActor) then
+      elseif LT:IsGuildOfficer(actor) and
+        (ownerRevision>currentOwnerRevision or
+        (ownerRevision==currentOwnerRevision and incomingOwnerActor>currentOwnerActor)) then
+        -- Only a guild-wide Officer may advance ownership history. A team owner
+        -- may sync ordinary team data, but must not poison the revision and block
+        -- a later Officer-authorized transfer with a forged future timestamp.
         team.ownerChangedAt=ownerRevision
         team.ownerChangedBy=incomingOwnerActor
       end
