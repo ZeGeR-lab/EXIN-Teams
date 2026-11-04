@@ -32,11 +32,10 @@ local function flush()
   end
 end
 local function newClient(name)
-  local client={name=name,online=true,frames={},saved={},env=nil}
+  local client={name=name,online=true,frames={},saved={}}
   local env={}
   setmetatable(env,{__index=_G})
   env._G=env
-  client.env=env
   env.EXINTeamsLiteDB=client.saved
   env.CreateFrame=function()
     local frame={}
@@ -79,9 +78,7 @@ assert(snoop.LT.teams.crimson~=nil,"creator should have the new team")
 assert(member.LT.teams.crimson~=nil,"guild broadcast should deliver the new team to the connected client")
 
 -- Member reconnects; the authoritative admin responds with a complete snapshot.
-print("DEBUG connection",member.env.GetGuildInfo(),member.LT:SelfName(),#sent)
-member.LT:CheckConnection()
-print("DEBUG aftercheck",#sent)
+member.env.C_ChatInfo.SendAddonMessage(member.LT.PREFIX,"HELLO|"..member.LT:SelfName(),"GUILD")
 flush()
 assert(member.LT.teams.crimson~=nil,"HELLO handshake should replicate the team")
 assert(member.LT.teams.crimson.owner=="member-aeriepeak","team owner should replicate")
@@ -110,10 +107,13 @@ snoop.LT:Act("DEL","crimson")
 flush()
 assert(snoop.LT.teams.crimson==nil and snoop.LT.deleted.crimson~=nil,"admin deletion should create a tombstone")
 member.online=true
-member.LT:CheckConnection()
+member.env.C_ChatInfo.SendAddonMessage(member.LT.PREFIX,"HELLO|"..member.LT:SelfName(),"GUILD")
 flush()
-print("DEBUG tombstone",snoop.LT.deleted.crimson and "A-has" or "A-missing",member.LT.deleted.crimson and "B-has" or "B-missing",member.LT.teams.crimson and "B-team" or "B-no-team")
-for _,packet in ipairs(sent) do if packet.message:match("^DEL|") or packet.message:match("^HELLO|") then print("DEBUG packet",packet.from,packet.channel,packet.message) end end
+local tombstoneReplay=false
+for _,packet in ipairs(sent) do
+  if packet.from==snoop.name and packet.message=="DEL|crimson" and member.online then tombstoneReplay=true end
+end
+assert(tombstoneReplay,"reconnecting client should trigger an Officer tombstone replay")
 assert(member.LT.teams.crimson==nil,"reconnect tombstone replay must remove a stale team")
 assert(member.LT.deleted.crimson~=nil,"reconnect should persist the deletion tombstone")
 
