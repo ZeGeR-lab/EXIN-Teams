@@ -88,4 +88,6 @@ assert(LT.teams.team2~=nil and LT.teams.team2.owner=="random-aeriepeak","designa
 -- Designated Officers may delete teams, even without an in-game Officer rank.
 receive("DEL|team1","Officer-AeriePeak")
 assert(LT.teams.team1==nil and LT.deleted.team1~=nil,"designated Officer should be allowed to delete a team")
+receive("NEW|team1|Resurrected Team|General||Random-AeriePeak|Blue|E01","Officer-AeriePeak")
+assert(LT.teams.team1==nil,"a deleted team must not be recreated from a stale NEW packet")
 print("CoreSync.spec.lua: all synchronization and permission tests passed")
