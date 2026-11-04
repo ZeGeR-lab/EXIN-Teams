@@ -1,0 +1,47 @@
+name: EXIN Teams Lite validation
+
+on:
+  push:
+    branches:
+      - lite-development
+    paths:
+      - "EXINTeamsLite/**"
+      - ".github/workflows/lite-validation.yml"
+  pull_request:
+    branches:
+      - lite-development
+    paths:
+      - "EXINTeamsLite/**"
+      - ".github/workflows/lite-validation.yml"
+  workflow_dispatch:
+
+jobs:
+  validate-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Lua 5.1
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.1
+
+      - name: Validate Lua syntax
+        working-directory: EXINTeamsLite
+        run: |
+          luac5.1 -p Core.lua
+          luac5.1 -p UI.lua
+
+      - name: Build Lite-only installation ZIP
+        run: |
+          mkdir -p dist
+          zip -r dist/EXIN-Teams-Lite.zip EXINTeamsLite
+
+      - name: Upload installation package
+        uses: actions/upload-artifact@v4
+        with:
+          name: EXIN-Teams-Lite
+          path: dist/EXIN-Teams-Lite.zip
+          if-no-files-found: error
+          retention-days: 30
