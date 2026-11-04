@@ -31,11 +31,12 @@ local detail=CreateFrame("Frame",nil,panel); detail:SetPoint("TOPLEFT",270,-75);
 local teamButtons,memberRows={},{}
 local title=label(detail,"Select a team",0,0,430,"GameFontNormalLarge")
 local meta=label(detail,"",0,-28,430,"GameFontHighlightSmall")
+local chosen, emblemPicker
 local emblemButton=button(detail,"Choose team emblem",0,-50,145,function()
   if not LT:CanManage(chosen(),LT:SelfName()) then return end
   emblemPicker:SetShown(not emblemPicker:IsShown())
 end)
-local emblemPicker=CreateFrame("Frame",nil,detail,"BackdropTemplate")
+emblemPicker=CreateFrame("Frame",nil,detail,"BackdropTemplate")
 emblemPicker:SetPoint("TOPLEFT",0,-80); emblemPicker:SetSize(238,190)
 emblemPicker:SetFrameStrata("DIALOG")
 emblemPicker:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",edgeFile="Interface\\Tooltips\\UI-Tooltip-Border",edgeSize=12,insets={left=3,right=3,top=3,bottom=3}})
@@ -77,7 +78,7 @@ end
 local function memberDisplay(who)
   local m=LT.roster[who]; return m and m.name or who:gsub("-"," ")
 end
-local function chosen() return LT.teams[LT.selected] end
+chosen=function() return LT.teams[LT.selected] end
 local function addTeam()
   if not LT:IsGuildOfficer(LT:SelfName()) then LT:Notice("Only the Guild Master or an authorized Officer can create teams."); return end
   ask("New team name (2–24 characters)","",function(name)
