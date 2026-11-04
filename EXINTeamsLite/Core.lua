@@ -322,8 +322,8 @@ local function apply(op,f,actor)
     team.name=f[3]; setMetadataRevision(team,revision,actor); save()
   elseif op=="MOTD" then
     local revision=tonumber(f[4])
-    if not LT:CanManage(team,actor) or not valid(f[3],150) or not revision or not metadataIsNotOlder(team,revision,f[5] or actor) then return false end
-    team.motd=f[3]; setMetadataRevision(team,revision,f[5] or actor); save()
+    if not LT:CanManage(team,actor) or not valid(f[3],150) or not revision or not metadataIsNotOlder(team,revision,(f[5] and f[5]~="" and f[5]) or actor) then return false end
+    team.motd=f[3]; setMetadataRevision(team,revision,(f[5] and f[5]~="" and f[5]) or actor); save()
   elseif op=="FOCUS" then
     local revision=tonumber(f[4])
     if not LT:CanManage(team,actor) or not valid(f[3],48) or not revision or not metadataIsNewer(team,revision,actor) then return false end
