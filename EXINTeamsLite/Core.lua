@@ -248,8 +248,13 @@ local function apply(op,f,actor)
       if incomingOwner~=team.owner and
         (not LT:IsGuildOfficer(actor) or ownerRevision<=(tonumber(team.ownerChangedAt) or 0)) then return false end
     end
-    -- Validate the complete snapshot before mutating any team fields.
-    team.name,team.focus,team.motd,team.color=f[3],f[4],f[5],color(f[6]); team.emblem=emblemId(f[7] or team.emblem)
+    -- Metadata and ownership have independent revisions; stale metadata never rolls back newer edits.
+    local metadataRevision=tonumber(f[10]) or 0
+    if metadataRevision>(tonumber(team.metaChangedAt) or -1) then
+      team.name,team.focus,team.motd,team.color=f[3],f[4],f[5],color(f[6])
+      team.emblem=emblemId(f[7] or team.emblem)
+      team.metaChangedAt=metadataRevision
+    end
     if incomingOwner then
       if incomingOwner~=team.owner then
         setTeamOwner(team,incomingOwner)
@@ -296,21 +301,26 @@ local function apply(op,f,actor)
       (actor~=who and not LT:CanManage(team,actor)) or who==team.owner then return false end
     team.members[who]=nil; if team.noteMembers then team.noteMembers[who]=nil end; if team.manualMembers then team.manualMembers[who]=nil end; save()
   elseif op=="NAME" then
-    if not LT:CanManage(team,actor) or not valid(f[3],24) then return false end
+    local revision=tonumber(f[4])
+    if not LT:CanManage(team,actor) or not valid(f[3],24) or not revision or revision<=(tonumber(team.metaChangedAt) or 0) then return false end
     local existing=findTeamByName(f[3]); if existing and existing~=id then return false end
-    team.name=f[3]; save()
+    team.name=f[3]; team.metaChangedAt=revision; save()
   elseif op=="MOTD" then
-    if not LT:CanManage(team,actor) or not valid(f[3],150) then return false end
-    team.motd=f[3]; save()
+    local revision=tonumber(f[4])
+    if not LT:CanManage(team,actor) or not valid(f[3],150) or not revision or revision<=(tonumber(team.metaChangedAt) or 0) then return false end
+    team.motd=f[3]; team.metaChangedAt=revision; save()
   elseif op=="FOCUS" then
-    if not LT:CanManage(team,actor) or not valid(f[3],48) then return false end
-    team.focus=f[3]; save()
+    local revision=tonumber(f[4])
+    if not LT:CanManage(team,actor) or not valid(f[3],48) or not revision or revision<=(tonumber(team.metaChangedAt) or 0) then return false end
+    team.focus=f[3]; team.metaChangedAt=revision; save()
   elseif op=="COLOR" then
-    if not LT:CanManage(team,actor) then return false end
-    team.color=color(f[3]); save()
+    local revision=tonumber(f[4])
+    if not LT:CanManage(team,actor) or not revision or revision<=(tonumber(team.metaChangedAt) or 0) then return false end
+    team.color=color(f[3]); team.metaChangedAt=revision; save()
   elseif op=="EMBLEM" then
-    if not LT:CanManage(team,actor) or not valid(f[3],4) then return false end
-    team.emblem=emblemId(f[3]); save()
+    local revision=tonumber(f[4])
+    if not LT:CanManage(team,actor) or not valid(f[3],4) or not revision or revision<=(tonumber(team.metaChangedAt) or 0) then return false end
+    team.emblem=emblemId(f[3]); team.metaChangedAt=revision; save()
   elseif op=="TRANSFER" then
     local newOwner=norm(f[3])
     if not LT:IsGuildOfficer(actor) or not LT.roster[newOwner] then return false end
@@ -325,8 +335,13 @@ local function apply(op,f,actor)
 end
 function LT:Act(op,...)
   local f={op,...}
+  if op=="NAME" or op=="MOTD" or op=="FOCUS" or op=="COLOR" or op=="EMBLEM" then
+    local team=self.teams[f[2]]
+    if not team then self:Notice("Team not found."); return end
+    f[4]=tostring(math.max(time(),(tonumber(team.metaChangedAt) or 0)+1))
+  end
   for _,v in ipairs(f) do if not valid(v,150) then self:Notice("Invalid value; check length and remove pipe characters."); return end end
-  if apply(op,f,selfName()) then send(op,...) else self:Notice("You do not have permission, or the requested change was invalid.") end
+  if apply(op,f,selfName()) then send(unpack(f)) else self:Notice("You do not have permission, or the requested change was invalid.") end
 end
 local function syncTeams()
   if not guild() then return end
@@ -344,7 +359,7 @@ local function syncTeams()
       -- Keep metadata packets small; MOTD travels separately so long messages
       -- cannot silently exceed the addon-message size limit during reconnect sync.
       send("NEW",id,team.name,team.focus or "General","",team.owner,team.color or "White",team.emblem or "E01")
-      send("SYNC",id,team.name,team.focus or "General","",team.color or "White",team.emblem or "E01",team.owner,tostring(team.ownerChangedAt or 0))
+      send("SYNC",id,team.name,team.focus or "General",team.motd or "",team.color or "White",team.emblem or "E01",team.owner,tostring(team.ownerChangedAt or 0),tostring(team.metaChangedAt or 0))
       if team.motd and team.motd~="" then send("MOTD",id,team.motd) end
       send("RCLR",id)
       for who,role in pairs(team.members or {}) do send("ROSTER",id,who,role) end
