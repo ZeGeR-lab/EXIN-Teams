@@ -170,5 +170,7 @@ function LT:Draw()
 end
 search:SetScript("OnEscapePressed",function(self) self:ClearFocus() end)
 
-SLASH_EXINTEAMLITE1 = "/exinlite"
+SlashCmdList.EXINTEAMLITE = function() LT:Toggle() end
+
+SLASH_EXINTEAMLITE1 = "/exin"
 SlashCmdList.EXINTEAMLITE = function() LT:Toggle() end
