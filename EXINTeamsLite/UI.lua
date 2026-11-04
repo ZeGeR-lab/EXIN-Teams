@@ -28,6 +28,10 @@ search:SetSize(220,24); search:SetPoint("TOPLEFT",22,-78); search:SetAutoFocus(f
 search:SetScript("OnTextChanged",function() LT:Draw() end)
 local teamList=CreateFrame("Frame",nil,panel); teamList:SetPoint("TOPLEFT",20,-115); teamList:SetSize(235,405)
 local detail=CreateFrame("Frame",nil,panel); detail:SetPoint("TOPLEFT",270,-75); detail:SetSize(465,465)
+local memberScroll=CreateFrame("ScrollFrame",nil,detail,"UIPanelScrollFrameTemplate")
+memberScroll:SetPoint("TOPLEFT",detail,"TOPLEFT",0,-95); memberScroll:SetSize(440,315)
+local memberContent=CreateFrame("Frame",nil,memberScroll)
+memberContent:SetSize(420,315); memberScroll:SetScrollChild(memberContent)
 local teamButtons,memberRows,settingsButtons={},{},{}
 local title=label(detail,"Select a team",0,0,430,"GameFontNormalLarge")
 local meta=label(detail,"",0,-28,430,"GameFontHighlightSmall")
@@ -37,7 +41,7 @@ local emblemButton=button(detail,"Choose team emblem",0,-50,145,function()
   emblemPicker:SetShown(not emblemPicker:IsShown())
 end)
 emblemPicker=CreateFrame("Frame",nil,detail,"BackdropTemplate")
-emblemPicker:SetPoint("TOPLEFT",0,-80); emblemPicker:SetSize(238,190)
+emblemPicker:SetPoint("TOPLEFT",0,-80); emblemPicker:SetSize(238,215)
 emblemPicker:SetFrameStrata("DIALOG")
 emblemPicker:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",edgeFile="Interface\\Tooltips\\UI-Tooltip-Border",edgeSize=12,insets={left=3,right=3,top=3,bottom=3}})
 emblemPicker:SetBackdropColor(0.025,0.035,0.05,0.98)
@@ -309,9 +313,11 @@ function LT:Draw()
     end
     for _,control in pairs(settingsButtons[team.id]) do control:SetShown(canManage) end
     settingsButtons[team.id].transfer:SetShown(self:IsGuildOfficer(self:SelfName()))
-    for i,who in ipairs(sortedMembers(team)) do
+    local teamMembers=sortedMembers(team)
+    memberContent:SetHeight(math.max(315,#teamMembers*27))
+    for i,who in ipairs(teamMembers) do
       if not memberRows[i] then
-        local row=CreateFrame("Frame",nil,detail); row:SetSize(440,25)
+        local row=CreateFrame("Frame",nil,memberContent); row:SetSize(420,25)
         row.name=label(row,"",0,0,235,"GameFontHighlight")
         row.role=button(row,"Role",240,-1,88,function(b)
           local t=chosen(); local who=b.member
@@ -323,7 +329,7 @@ function LT:Draw()
         row.remove=button(row,"Remove",340,-1,75,function(b) removeMember(b.member) end)
         memberRows[i]=row
       end
-      local row=memberRows[i]; row:ClearAllPoints(); row:SetPoint("TOPLEFT",0,-65-(i-1)*27)
+      local row=memberRows[i]; row:ClearAllPoints(); row:SetPoint("TOPLEFT",0,-(i-1)*27)
       local m=self.roster[who]
       row.name:SetText((m and m.online and "|cff44dd77●|r " or "|cff888888○|r ")..memberDisplay(who))
       row.role.member=who; row.role:SetText((team.members[who] or "member"):gsub("^%l",string.upper)); row.role:SetShown(canManage and who~=team.owner); row.role:SetEnabled(canManage and who~=team.owner)
