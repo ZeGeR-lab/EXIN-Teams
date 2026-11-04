@@ -89,7 +89,7 @@ function LT:IsGuildOfficer(who)
   local key=norm(who)
   if self:IsGuildLeader(key) then return true end
   local m=self.roster[key]
-  return m~=nil and self.authorizedOfficers[key]~=nil
+  return m~=nil and self.authorizedOfficers[key]~=nil and not self.authorizedOfficers[key].revoked
 end
 function LT:IsTeamLeader(who, team)
   if team and team.members and team.members[norm(who)]=="leader" then return true end
@@ -179,9 +179,7 @@ local function apply(op,f,actor)
     -- Only the current guild master may alter the replicated authorization list.
     if not LT:IsGuildLeader(actor) or not LT.roster[norm(f[2])] or (f[3]~="yes" and f[3]~="no") then return false end
     local target=norm(f[2])
-    if f[3]=="yes" then
-      LT.authorizedOfficers[target]={by=actor,at=tonumber(f[4]) or time()}
-    else LT.authorizedOfficers[target]=nil end
+    LT.authorizedOfficers[target]={by=actor,at=tonumber(f[4]) or time(),revoked=(f[3]=="no")}
     save(); LT:Refresh(); return true
   elseif op=="NEW" then
     local id,name,focus,motd,owner,teamColor=f[2],f[3],f[4],f[5],norm(f[6]),color(f[7])
@@ -247,8 +245,8 @@ end
 local function syncTeams()
   if not guild() then return end
   if LT:IsGuildLeader(selfName()) then
-    for who in pairs(LT.roster) do
-      send("AUTH",who,LT.authorizedOfficers[who] and "yes" or "no",tostring((LT.authorizedOfficers[who] and LT.authorizedOfficers[who].at) or time()))
+    for who,record in pairs(LT.authorizedOfficers) do
+      send("AUTH",who,record.revoked and "no" or "yes",tostring(record.at or time()))
     end
   end
   for id,team in pairs(LT.teams) do
