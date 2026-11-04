@@ -150,4 +150,8 @@ captured(nil,"GUILD_ROSTER_UPDATE")
 assert(LT.teams.team2.noteMembers["zzz-aeriepeak"]==nil,"changing the guild note should remove the old primary team membership")
 assert(LT.teams.team3.noteMembers["zzz-aeriepeak"]==true,"changing the guild note should assign the new primary team membership")
 assert(LT.roster["zzz-aeriepeak"].discordName=="Discord - Zzz","Discord names containing hyphens should be preserved")
+-- Local UI-originated action validation must also accept an empty message.
+LT.teams.team2.motd="Message to clear"
+LT:Act("MOTD","team2","")
+assert(LT.teams.team2.motd=="","local team manager action should be able to clear the message")
 print("CoreSync.spec.lua: all synchronization and permission tests passed")
