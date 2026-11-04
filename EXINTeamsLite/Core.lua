@@ -6,7 +6,7 @@ LT.teams, LT.roster, LT.authorizedOfficers = {}, {}, {}
 LT.selected, LT.db = nil, nil
 -- Set this to the administrator character's normalized name when confirmed.
 -- Example format: "character-realm" (or just "character" on a single-realm guild).
-LT.SUPER_ADMIN_NAME = ""
+LT.SUPER_ADMIN_NAME = "Snoop Wharg"
 LT.colors = {
   {name="Pink",hex="ff83b7"},{name="Purple",hex="aa89ff"},{name="Blue",hex="69b6ff"},
   {name="Green",hex="78d996"},{name="Yellow",hex="f7d96b"},{name="Orange",hex="ffab69"},
