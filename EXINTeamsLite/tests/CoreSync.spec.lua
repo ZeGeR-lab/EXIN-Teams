@@ -60,14 +60,16 @@ receive("ROSTER|team1|Officer-AeriePeak|officer","Officer-AeriePeak")
 assert(LT.teams.team1.members["officer-aeriepeak"]=="officer","roster replay should restore current manual membership")
 
 -- Guild-note primary members retain their role and provenance; ADD cannot convert or demote them.
-receive("ROSTER|team1|Member-AeriePeak|officer","Officer-AeriePeak")
-assert(LT.teams.team1.members["member-aeriepeak"]=="officer","role changes should apply to primary members")
-assert(LT.teams.team1.noteMembers["member-aeriepeak"],"role changes must preserve primary membership provenance")
-receive("ADD|team1|Member-AeriePeak","Officer-AeriePeak")
-assert(LT.teams.team1.members["member-aeriepeak"]=="officer","ADD must not silently demote an existing primary member")
-assert(LT.teams.team1.noteMembers["member-aeriepeak"],"ADD must not convert primary membership into manual membership")
+roster[7][7]="Team Alpha - DiscordZzz"
 captured(nil,"GUILD_ROSTER_UPDATE")
-assert(LT.teams.team1.members["member-aeriepeak"]=="officer","roster refresh must preserve a primary member's assigned role")
+receive("ROSTER|team1|Zzz-AeriePeak|officer","Officer-AeriePeak")
+assert(LT.teams.team1.members["zzz-aeriepeak"]=="officer","role changes should apply to primary members")
+assert(LT.teams.team1.noteMembers["zzz-aeriepeak"],"role changes must preserve primary membership provenance")
+receive("ADD|team1|Zzz-AeriePeak","Officer-AeriePeak")
+assert(LT.teams.team1.members["zzz-aeriepeak"]=="officer","ADD must not silently demote an existing primary member")
+assert(LT.teams.team1.noteMembers["zzz-aeriepeak"],"ADD must not convert primary membership into manual membership")
+captured(nil,"GUILD_ROSTER_UPDATE")
+assert(LT.teams.team1.members["zzz-aeriepeak"]=="officer","roster refresh must preserve a primary member's assigned role")
 
 -- Team Leaders may manage their team, but cannot delete it or change guild-wide permissions.
 receive("ROSTER|team1|OldMember-AeriePeak|leader","Member-AeriePeak")
