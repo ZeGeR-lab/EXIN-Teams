@@ -336,7 +336,7 @@ local function apply(op,f,actor)
     team.name=f[3]; setMetadataRevision(team,revision,actor); save()
   elseif op=="MOTD" then
     local revision=tonumber(f[4])
-    if not LT:CanManage(team,actor) or not valid(f[3],150) or not revision or not metadataIsNotOlder(team,revision,(f[5] and f[5]~="" and f[5]) or actor) then return false end
+    if not LT:CanManage(team,actor) or not validOptional(f[3],150) or not revision or not metadataIsNotOlder(team,revision,(f[5] and f[5]~="" and f[5]) or actor) then return false end
     team.motd=f[3]; setMetadataRevision(team,revision,(f[5] and f[5]~="" and f[5]) or actor); save()
   elseif op=="FOCUS" then
     local revision=tonumber(f[4])
@@ -370,8 +370,8 @@ function LT:Act(op,...)
     f[4]=tostring(math.max(time(),(tonumber(team.metaChangedAt) or 0)+1))
   end
   for i,v in ipairs(f) do
-    local optionalNewMotd=(op=="NEW" and i==5 and v=="")
-    if not optionalNewMotd and not valid(v,150) then
+    local optionalMotd=((op=="NEW" and i==5) or (op=="MOTD" and i==3)) and v==""
+    if not optionalMotd and not valid(v,150) then
       self:Notice("Invalid value; check length and remove pipe characters."); return
     end
   end
