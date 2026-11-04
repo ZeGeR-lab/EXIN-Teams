@@ -282,7 +282,7 @@ function LT:Draw()
         local t=chosen(); if t and LT:CanManage(t,LT:SelfName()) then
           ask("New team name (2–24 characters). Guild notes using the old team name will need to be updated manually.",t.name,function(value)
             value=(value or ""):match("^%s*(.-)%s*$")
-            if #value>=2 and #value<=24 and not value:find("[|\\r\\n]") then
+            if #value>=2 and #value<=24 and not value:find("[|\r\n]") then
               StaticPopupDialogs.EXIN_LITE_RENAME={text="Rename "..t.name.." to "..value.."? Guild public notes that use the old team name will not be changed automatically. Update those notes after renaming to preserve primary membership.",button1=ACCEPT,button2=CANCEL,timeout=0,whileDead=true,hideOnEscape=true,OnAccept=function() LT:Act("NAME",t.id,value) end}
               StaticPopup_Show("EXIN_LITE_RENAME")
             else LT:Notice("Team names must be 2–24 characters.") end
@@ -293,7 +293,7 @@ function LT:Draw()
         local t=chosen(); if t and LT:CanManage(t,LT:SelfName()) then
           ask("Team focus / category",t.focus or "General",function(value)
             value=(value or ""):match("^%s*(.-)%s*$")
-            if #value>0 and #value<=48 and not value:find("[|\\r\\n]") then LT:Act("FOCUS",t.id,value) end
+            if #value>0 and #value<=48 and not value:find("[|\r\n]") then LT:Act("FOCUS",t.id,value) end
           end)
         end
       end)
@@ -301,7 +301,7 @@ function LT:Draw()
         local t=chosen(); if t and LT:CanManage(t,LT:SelfName()) then
           ask("Team message (max 150 characters; leave blank to clear)",t.motd or "",function(value)
             value=(value or ""):match("^%s*(.-)%s*$")
-            if #value<=150 and not value:find("[|\\r\\n]") then LT:Act("MOTD",t.id,value) end
+            if #value<=150 and not value:find("[|\r\n]") then LT:Act("MOTD",t.id,value) end
           end)
         end
       end)
