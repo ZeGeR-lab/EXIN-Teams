@@ -248,8 +248,8 @@ local backButton=button(permissionsPanel,"Back to teams",0,-420,120,function()
   permissionsPanel:Hide(); detail:Show()
 end)
 local function managePermissions()
-  rosterPanel:Hide()
   if not LT:IsGuildLeader(LT:SelfName()) then LT:Notice("Only the Guild Master or designated administrator can manage Officer permissions."); return end
+  rosterPanel:Hide()
   detail:Hide(); permissionsPanel:Show(); permissionSearch:SetText(""); drawPermissions()
 end
 button(panel,"Officer permissions",525,-520,130,managePermissions)
