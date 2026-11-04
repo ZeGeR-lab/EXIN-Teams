@@ -100,6 +100,18 @@ flush()
 assert(snoop.LT.teams.crimson.motd=="","cleared team message should replicate to admin")
 assert(member.LT.teams.crimson.motd=="","cleared team message should persist on owner")
 
+-- Guild-wide Officer ownership transfer must converge, and a stale owner snapshot must not roll it back.
+snoop.LT:Act("TRANSFER","crimson","Officer-AeriePeak","2200")
+flush()
+assert(snoop.LT.teams.crimson.owner=="officer-aeriepeak","transferring Officer should become owner locally")
+assert(member.LT.teams.crimson.owner=="officer-aeriepeak","ownership transfer should replicate to connected clients")
+assert(snoop.LT.teams.crimson.members["officer-aeriepeak"]=="leader","new owner should receive Leader role")
+assert(snoop.LT.teams.crimson.members["member-aeriepeak"]=="officer","previous owner should be demoted to Officer")
+local staleOwner="SYNC|crimson|Old Owner Snapshot|Raid||Blue|E01|member-aeriepeak|2199|0|"
+member.eventHandler(nil,"CHAT_MSG_ADDON",member.LT.PREFIX,staleOwner,"GUILD","Snoop Wharg-AeriePeak")
+assert(member.LT.teams.crimson.owner=="officer-aeriepeak","stale owner snapshot must not roll back a completed transfer")
+assert(member.LT.teams.crimson.name=="Crimson Raiders","rejected stale owner snapshot must not overwrite metadata")
+
 -- A remote roster edit must be reflected on both clients.
 member.LT:Act("ADD","crimson","Officer-AeriePeak")
 flush()
