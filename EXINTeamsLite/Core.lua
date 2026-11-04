@@ -1,6 +1,6 @@
 local ADDON, LT = ...
 _G.EXINTeamsLite = LT
-LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.5.16"
+LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.5.17"
 LT.PREFIX = "EXINL1" -- Dedicated Lite channel; avoids collisions with the private Full edition.
 LT.teams, LT.roster, LT.authorizedOfficers = {}, {}, {}
 LT.selected, LT.db = nil, nil
@@ -200,7 +200,7 @@ local function rosterRefresh()
     team.manualMembers=team.manualMembers or {}
     for who in pairs(team.noteMembers) do
       local m=LT.roster[who]
-      if not m or not m.noteTeam or m.noteTeam:lower()~=tostring(team.name):lower() then
+      if not m or not m.noteTeam or (m.noteTeam:lower()~=tostring(team.name):lower() and m.noteTeam:lower()~=tostring(team.color):lower()) then
         team.noteMembers[who]=nil
         if not team.manualMembers[who] then team.members[who]=nil end
       end
