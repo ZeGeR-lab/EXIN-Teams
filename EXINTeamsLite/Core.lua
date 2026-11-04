@@ -232,8 +232,22 @@ local function apply(op,f,actor)
     if not LT:CanManage(team,actor) or not valid(f[3],4) then return false end
     team.emblem=emblemId(f[3]); save()
   elseif op=="TRANSFER" then
-    if not LT:IsGuildOfficer(actor) or not LT.roster[norm(f[3])] then return false end
-    team.owner=norm(f[3]); team.delegatedOwner=team.owner; save()
+    local newOwner=norm(f[3])
+    if not LT:IsGuildOfficer(actor) or not LT.roster[newOwner] then return false end
+    local previousOwner=team.owner
+    team.members=team.members or {}
+    team.manualMembers=team.manualMembers or {}
+    team.noteMembers=team.noteMembers or {}
+    -- Ownership and the visible Leader role must always agree on every client.
+    if previousOwner and previousOwner~=newOwner and team.members[previousOwner]=="leader" then
+      team.members[previousOwner]="officer"
+    end
+    team.owner=newOwner
+    team.members[newOwner]="leader"
+    team.noteMembers[newOwner]=nil
+    team.manualMembers[newOwner]=true
+    team.delegatedOwner=newOwner
+    save()
   else return false end
   LT:Refresh(); return true
 end
