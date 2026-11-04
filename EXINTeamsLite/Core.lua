@@ -201,7 +201,9 @@ local function apply(op,f,actor)
   if not team then return false end
   if op=="SYNC" then
     if (actor~=team.owner and not LT:IsGuildOfficer(actor)) or not valid(f[3],24) or not valid(f[4],48) or not valid(f[5],150) then return false end
-    team.name,team.focus,team.motd,team.color=f[3],f[4],f[5],color(f[6]); team.emblem=emblemId(f[7] or team.emblem); save()
+    team.name,team.focus,team.motd,team.color=f[3],f[4],f[5],color(f[6]); team.emblem=emblemId(f[7] or team.emblem)
+    if f[8] and LT.roster[norm(f[8])] then team.owner=norm(f[8]) end
+    save()
   elseif op=="ROSTER" then
     if not LT:CanManage(team,actor) or not valid(f[3],80) or not LT.roster[norm(f[3])] or
       (f[4]~="member" and f[4]~="officer" and f[4]~="leader") then return false end
@@ -246,7 +248,7 @@ local function syncTeams()
   for id,team in pairs(LT.teams) do
     if team.owner==selfName() or LT:IsGuildOfficer(selfName()) then
       send("NEW",id,team.name,team.focus or "General",team.motd or "",team.owner,team.color or "White",team.emblem or "E01")
-      send("SYNC",id,team.name,team.focus or "General",team.motd or "",team.color or "White",team.emblem or "E01")
+      send("SYNC",id,team.name,team.focus or "General",team.motd or "",team.color or "White",team.emblem or "E01",team.owner)
       for who,role in pairs(team.members or {}) do send("ROSTER",id,who,role) end
     end
   end
