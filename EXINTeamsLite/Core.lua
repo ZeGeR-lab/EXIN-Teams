@@ -243,9 +243,17 @@ local function apply(op,f,actor)
     team.name,team.focus,team.motd,team.color=f[3],f[4],f[5],color(f[6]); team.emblem=emblemId(f[7] or team.emblem)
     if f[8] then
       local incomingOwner=norm(f[8])
-      -- SYNC is a metadata snapshot, never an ownership-transfer command.
-      -- Ownership changes must arrive through the separately authorized TRANSFER op.
-      if incomingOwner~=team.owner or not LT.roster[incomingOwner] then return false end
+      local ownerRevision=tonumber(f[9]) or 0
+      if not LT.roster[incomingOwner] then return false end
+      if incomingOwner~=team.owner then
+        -- Only a trusted guild officer may reconcile ownership, and only with
+        -- a revision newer than the last locally accepted transfer.
+        if not LT:IsGuildOfficer(actor) or ownerRevision<=(tonumber(team.ownerChangedAt) or 0) then return false end
+        setTeamOwner(team,incomingOwner)
+        team.ownerChangedAt=ownerRevision
+      elseif ownerRevision>(tonumber(team.ownerChangedAt) or 0) then
+        team.ownerChangedAt=ownerRevision
+      end
     end
     -- Repair legacy snapshots whose owner and Leader role have drifted apart.
     if team.owner and LT.roster[team.owner] then setTeamOwner(team,team.owner) end
@@ -302,7 +310,10 @@ local function apply(op,f,actor)
     local newOwner=norm(f[3])
     if not LT:IsGuildOfficer(actor) or not LT.roster[newOwner] then return false end
     -- Ownership and the visible Leader role must always agree on every client.
+    local revision=tonumber(f[4]) or time()
+    revision=math.max(revision,(tonumber(team.ownerChangedAt) or 0)+1)
     setTeamOwner(team,newOwner)
+    team.ownerChangedAt=revision
     save()
   else return false end
   LT:Refresh(); return true
@@ -328,7 +339,7 @@ local function syncTeams()
       -- Keep metadata packets small; MOTD travels separately so long messages
       -- cannot silently exceed the addon-message size limit during reconnect sync.
       send("NEW",id,team.name,team.focus or "General","",team.owner,team.color or "White",team.emblem or "E01")
-      send("SYNC",id,team.name,team.focus or "General","",team.color or "White",team.emblem or "E01",team.owner)
+      send("SYNC",id,team.name,team.focus or "General","",team.color or "White",team.emblem or "E01",team.owner,tostring(team.ownerChangedAt or 0))
       if team.motd and team.motd~="" then send("MOTD",id,team.motd) end
       send("RCLR",id)
       for who,role in pairs(team.members or {}) do send("ROSTER",id,who,role) end
