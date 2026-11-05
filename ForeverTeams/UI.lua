@@ -206,6 +206,46 @@ local systemTeams = {}
 local function chosen() return FT.teams[FT.selected] or systemTeams[FT.selected] end
 local function me() return FT:SelfName() end
 local function isSystemTeam(team) return team and systemTeams[team.id] == team end
+local teamInfoPanel=CreateFrame("Frame",nil,UIParent,"BackdropTemplate")
+teamInfoPanel:SetSize(430,235)
+teamInfoPanel:SetPoint("CENTER")
+teamInfoPanel:SetFrameStrata("FULLSCREEN_DIALOG")
+teamInfoPanel:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",edgeFile="Interface\\DialogFrame\\UI-DialogBox-Border",edgeSize=24,
+  insets={left=8,right=8,top=8,bottom=8}})
+teamInfoPanel:Hide()
+local teamInfoTitle=line(teamInfoPanel,20,-20,370)
+local teamInfoSchedule=line(teamInfoPanel,22,-65,380,"small")
+teamInfoSchedule:SetHeight(48)
+teamInfoSchedule:SetJustifyV("TOP")
+local teamInfoContact=line(teamInfoPanel,22,-125,380,"small")
+teamInfoContact:SetHeight(40)
+teamInfoContact:SetJustifyV("TOP")
+local teamInfoEdit
+local function drawTeamInfo(team)
+  if not team then teamInfoPanel:Hide(); return end
+  local info=FT.systemInfo and FT.systemInfo[team.id] or {}
+  teamInfoTitle:SetText("|cff9bdd00"..team.name.."  •  TEAM INFO|r")
+  teamInfoSchedule:SetText("|cffffd36aRAID DAYS / TIMES|r\\n"..((info.schedule and info.schedule~="") and info.schedule or "Not posted yet."))
+  teamInfoContact:SetText("|cffffd36aJOIN / CONTACT|r\\n"..((info.contact and info.contact~="") and info.contact or "No contact listed yet."))
+  teamInfoEdit:SetShown(FT:CanEditInfo(team,FT:SelfName()) and true or false)
+end
+teamInfoEdit=button(teamInfoPanel,"Edit info",105,-185,90,function()
+  local team=FT.teams[FT.selected] or systemTeams[FT.selected]
+  if not team or not FT:CanEditInfo(team,FT:SelfName()) then return end
+  local info=FT.systemInfo and FT.systemInfo[team.id] or {}
+  ask("Raid days and times (include server time; max 70 characters)",info.schedule or "",function(schedule)
+    schedule=schedule:match("^%s*(.-)%s*$")
+    if #schedule>70 or schedule:find("[|\\r\\n]") then FT:Notice("Schedule must be 70 characters or fewer."); return end
+    C_Timer.After(0,function()
+      ask("Who should applicants contact? (name / Discord; max 70 characters)",info.contact or "",function(contact)
+        contact=contact:match("^%s*(.-)%s*$")
+        if #contact>70 or contact:find("[|\\r\\n]") then FT:Notice("Contact must be 70 characters or fewer."); return end
+        FT:Act("INFO",team.id,schedule,contact)
+      end)
+    end)
+  end)
+end)
+button(teamInfoPanel,"Close",225,-185,90,function() teamInfoPanel:Hide() end)
 local function canSee(team) return isSystemTeam(team) or FT:CanSeeDetails(team, me()) end
 local function sortedTeams()
   local list = {}
@@ -498,6 +538,12 @@ end
 button(activityPanel,"Previous",25,-375,90,function() if activityPage>1 then activityPage=activityPage-1; drawActivity() end end)
 button(activityPanel,"Next",390,-375,70,function() activityPage=activityPage+1; drawActivity() end)
 button(activityPanel,"Close",480,-375,90,function() activityPanel:Hide() end)
+local teamInfoButton=button(teamPage,"Team info",465,-470,105,function()
+  local team=chosen()
+  if not team then return end
+  drawTeamInfo(team)
+  teamInfoPanel:Show()
+end)
 local activityButton=button(teamPage,"Activity log",580,-470,105,function()
   activityPage=1
   drawActivity()
@@ -914,6 +960,7 @@ local function drawTeams()
     end
   end
   notesNeeded.missing=missingNotes
+  teamInfoButton:SetShown(team ~= nil)
   activityButton:SetShown(team ~= nil and not isSystemTeam(team) and canSee(team) and true or false)
   notesNeeded:SetShown(team ~= nil and not isSystemTeam(team) and canSee(team) and #missingNotes > 0)
   notesNeeded:SetText("Notes needed ("..#missingNotes..")")
