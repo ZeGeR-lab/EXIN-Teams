@@ -96,6 +96,13 @@ flush()
 assert(member.LT.teams.crimson~=nil,"HELLO handshake should replicate the team")
 assert(member.LT.teams.crimson.owner=="member-aeriepeak","team owner should replicate")
 assert(member.LT.teams.crimson.members["member-aeriepeak"]=="leader","owner Leader role should replicate")
+local syncCountAfterHello=0
+for _,packet in ipairs(sent) do if packet.from==snoop.name then syncCountAfterHello=syncCountAfterHello+1 end end
+member.env.C_ChatInfo.SendAddonMessage(member.LT.PREFIX,"Ex Inferno@AeriePeak|HELLO|"..member.LT:SelfName().."|session-1","GUILD")
+flush()
+local syncCountAfterDuplicateHello=0
+for _,packet in ipairs(sent) do if packet.from==snoop.name then syncCountAfterDuplicateHello=syncCountAfterDuplicateHello+1 end end
+assert(syncCountAfterDuplicateHello==syncCountAfterHello,"repeated HELLO packets in the same session should not trigger duplicate snapshots")
 
 -- The remote owner edits metadata; both installations must converge.
 member.LT:Act("NAME","crimson","Crimson Raiders")
