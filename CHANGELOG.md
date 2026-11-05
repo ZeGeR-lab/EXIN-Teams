@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.8 — 2026-11-05
+
+- Fix raid schedule and contact information being rejected by the INFO handler due to an incorrectly escaped validation pattern.
+- Allow normal letters in saved team schedule and contact fields while continuing to reject pipes and line breaks.
+
+
 ## 0.6.7 — 2026-11-05
 
 - Increase team leadership transfer character-name input allowance to 48 characters so full first-and-last character names fit.
