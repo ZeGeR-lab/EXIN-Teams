@@ -26,7 +26,8 @@ FT.colors = {
 }
 function FT:Color(name)
   for _, color in ipairs(self.colors) do if color.name == name then return color end end
-  return self.colors[8]
+  for _, color in ipairs(self.colors) do if color.name == "White" then return color end end
+  return self.colors[#self.colors]
 end
 local PREFIX = "FTeams1"
 local frame = CreateFrame("Frame")
