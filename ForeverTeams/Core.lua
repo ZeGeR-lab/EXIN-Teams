@@ -22,6 +22,7 @@ FT.colors = {
   {name="Blue", hex="69b6ff"}, {name="Green", hex="78d996"},
   {name="Yellow", hex="f7d96b"}, {name="Orange", hex="ffab69"},
   {name="Red", hex="ff7777"}, {name="Crimson", hex="dc143c"},
+  {name="Amethyst", hex="9966cc"}, {name="Teal", hex="008080"},
   {name="White", hex="eeeeee"}, {name="Black", hex="838b92"},
 }
 function FT:Color(name)
