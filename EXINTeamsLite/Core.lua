@@ -252,9 +252,9 @@ local function emit(channel,target,op,...)
   end
   local result
   if C_ChatInfo and C_ChatInfo.SendAddonMessage then
-    result=select(-1,C_ChatInfo.SendAddonMessage(LT.PREFIX,msg,channel,target))
+    result=lastReturn(C_ChatInfo.SendAddonMessage(LT.PREFIX,msg,channel,target))
   elseif SendAddonMessage then
-    result=select(-1,SendAddonMessage(LT.PREFIX,msg,channel,target))
+    result=lastReturn(SendAddonMessage(LT.PREFIX,msg,channel,target))
   else
     return
   end
