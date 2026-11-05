@@ -63,10 +63,18 @@ local function rosterRefresh()
   for i = 1, total do
     local name, rank, rankID, level, class, _, note, _, online, _, _, _, _, _, _, _, guid = GetGuildRosterInfo(i)
     if name then
-      local label, discord = (note or ""):match("^%s*(.-)%s+%-%s+(.+)%s*$")
-      if label == "" or not discord or trim(discord) == "" then label, discord = nil, nil end
+      local label, discord = (note or ""):match("^%s*([%a]+)%s+%-%s+(.+)%s*$")
+      local canonicalColor
+      if label then
+        for _, color in ipairs(FT.colors) do
+          if color.name:lower() == label:lower() then canonicalColor = color.name; break end
+        end
+      end
+      if not canonicalColor or not discord or trim(discord) == "" then
+        canonicalColor, discord = nil, nil
+      end
       FT.roster[norm(name)] = { name = name, rank = rank, rankID = rankID, level = level, class = class,
-        online = online, guid = guid, note = note or "", noteTeam = label, discordName = discord and trim(discord) }
+        online = online, guid = guid, note = note or "", noteTeam = canonicalColor, discordName = discord and trim(discord) }
     end
   end
   if FT.db then
