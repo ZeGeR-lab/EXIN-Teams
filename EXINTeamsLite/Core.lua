@@ -95,6 +95,12 @@ local function isAdminIdentity(key)
   end
   return count==1 and match==key
 end
+local function plausibleRevision(revision)
+  revision=tonumber(revision)
+  -- Revisions are Unix timestamps. Allow modest clock skew, but reject far-future
+  -- values that could otherwise permanently block legitimate team updates.
+  return revision~=nil and revision>0 and revision<=time()+300
+end
 local function metadataIsNewer(team,revision,actor)
   local current=tonumber(team.metaChangedAt) or 0
   if revision~=current then return revision>current end
@@ -371,12 +377,12 @@ local function apply(op,f,actor)
         (ownerRevision==currentOwnerRevision and incomingOwnerActor>currentOwnerActor)
       if not LT.roster[incomingOwner] then return false end
       if incomingOwner~=team.owner and
-        (not LT:IsGuildOfficer(actor) or ownerRevision<=0 or not ownerIsNewer) then return false end
+        (not LT:IsGuildOfficer(actor) or not plausibleRevision(ownerRevision) or not ownerIsNewer) then return false end
     end
     -- Metadata and ownership have independent revisions; stale metadata never rolls back newer edits.
     local metadataRevision=tonumber(f[10]) or 0
     local metadataActor=norm(f[11] or actor)
-    if metadataIsNewer(team,metadataRevision,metadataActor) then
+    if metadataRevision>=0 and metadataRevision<=time()+300 and metadataIsNewer(team,metadataRevision,metadataActor) then
       team.name,team.focus,team.motd,team.color=f[3],f[4],f[5],color(f[6])
       team.emblem=emblemId(f[7] or team.emblem)
       setMetadataRevision(team,metadataRevision,metadataActor)
@@ -390,8 +396,8 @@ local function apply(op,f,actor)
         team.ownerChangedAt=ownerRevision
         team.ownerChangedBy=incomingOwnerActor
       elseif LT:IsGuildOfficer(actor) and
-        (ownerRevision>currentOwnerRevision or
-        (ownerRevision==currentOwnerRevision and incomingOwnerActor>currentOwnerActor)) then
+        (plausibleRevision(ownerRevision) and (ownerRevision>currentOwnerRevision or
+        (ownerRevision==currentOwnerRevision and incomingOwnerActor>currentOwnerActor))) then
         -- Only a guild-wide Officer may advance ownership history. A team owner
         -- may sync ordinary team data, but must not poison the revision and block
         -- a later Officer-authorized transfer with a forged future timestamp.
@@ -443,20 +449,20 @@ local function apply(op,f,actor)
     team.members[who]=nil; if team.noteMembers then team.noteMembers[who]=nil end; if team.manualMembers then team.manualMembers[who]=nil end; save()
   elseif op=="NAME" then
     local revision=tonumber(f[4])
-    if not LT:CanManage(team,actor) or not valid(f[3],24) or not revision or not metadataIsNewer(team,revision,actor) then return false end
+    if not LT:CanManage(team,actor) or not valid(f[3],24) or not plausibleRevision(revision) or not metadataIsNewer(team,revision,actor) then return false end
     local existing=findTeamByName(f[3]); if existing and existing~=id then return false end
     team.name=f[3]; setMetadataRevision(team,revision,actor); save()
   elseif op=="MOTD" then
     local revision=tonumber(f[4])
-    if not LT:CanManage(team,actor) or not validOptional(f[3],150) or not revision or not metadataIsNotOlder(team,revision,(f[5] and f[5]~="" and f[5]) or actor) then return false end
+    if not LT:CanManage(team,actor) or not validOptional(f[3],150) or not plausibleRevision(revision) or not metadataIsNotOlder(team,revision,(f[5] and f[5]~="" and f[5]) or actor) then return false end
     team.motd=f[3]; setMetadataRevision(team,revision,(f[5] and f[5]~="" and f[5]) or actor); save()
   elseif op=="FOCUS" then
     local revision=tonumber(f[4])
-    if not LT:CanManage(team,actor) or not valid(f[3],48) or not revision or not metadataIsNewer(team,revision,actor) then return false end
+    if not LT:CanManage(team,actor) or not valid(f[3],48) or not plausibleRevision(revision) or not metadataIsNewer(team,revision,actor) then return false end
     team.focus=f[3]; setMetadataRevision(team,revision,actor); save()
   elseif op=="COLOR" then
     local revision=tonumber(f[4])
-    if not LT:CanManage(team,actor) or not revision or not metadataIsNewer(team,revision,actor) then return false end
+    if not LT:CanManage(team,actor) or not plausibleRevision(revision) or not metadataIsNewer(team,revision,actor) then return false end
     team.color=color(f[3]); setMetadataRevision(team,revision,actor); save()
   elseif op=="EMBLEM" then
     local revision=tonumber(f[4])
@@ -470,7 +476,7 @@ local function apply(op,f,actor)
     local currentRevision=tonumber(team.ownerChangedAt) or 0
     local currentActor=norm(team.ownerChangedBy or "")
     -- Equal-time transfers are resolved by actor identity, not packet order.
-    if revision<=0 or revision<currentRevision or
+    if not plausibleRevision(revision) or revision<currentRevision or
       (revision==currentRevision and actor<=currentActor) then return false end
     setTeamOwner(team,newOwner)
     team.ownerChangedAt=revision
