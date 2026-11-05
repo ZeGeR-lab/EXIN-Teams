@@ -101,6 +101,18 @@ local function plausibleRevision(revision)
   -- values that could otherwise permanently block legitimate team updates.
   return revision~=nil and revision>0 and revision<=time()+300
 end
+local function sanitizeStoredRevisions(teams)
+  for _,team in pairs(teams or {}) do
+    if (tonumber(team.metaChangedAt) or 0)>time()+300 then
+      team.metaChangedAt=0
+      team.metaChangedBy=nil
+    end
+    if (tonumber(team.ownerChangedAt) or 0)>time()+300 then
+      team.ownerChangedAt=0
+      team.ownerChangedBy=nil
+    end
+  end
+end
 local function metadataIsNewer(team,revision,actor)
   local current=tonumber(team.metaChangedAt) or 0
   if revision~=current then return revision>current end
@@ -546,6 +558,7 @@ function LT:OpenGuild()
   activeGuildKey=key
   self.db=EXINTeamsLiteDB[key]
   self.teams=self.db.teams or {}; self.authorizedOfficers=self.db.authorizedOfficers or {}
+  sanitizeStoredRevisions(self.teams)
   self.deleted=self.db.deleted or {}
   self.db.teams=self.teams; self.db.authorizedOfficers=self.authorizedOfficers; self.db.deleted=self.deleted
   wipe(self.roster)
