@@ -559,6 +559,7 @@ frame:RegisterEvent("PLAYER_LOGIN")
 frame:RegisterEvent("PLAYER_GUILD_UPDATE")
 frame:RegisterEvent("GUILD_ROSTER_UPDATE")
 frame:RegisterEvent("CHAT_MSG_ADDON")
+frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("ENCOUNTER_END")
 frame:RegisterEvent("CHALLENGE_MODE_COMPLETED")
 frame:RegisterEvent("PVP_MATCH_COMPLETE")
@@ -571,7 +572,7 @@ frame:SetScript("OnEvent",function(_,event,...)
   elseif event=="PLAYER_GUILD_UPDATE" then LT:OpenGuild()
   elseif event=="GUILD_ROSTER_UPDATE" then
     if not guild() then clearGuildRuntime() else rosterRefresh() end
-  elseif event=="ENCOUNTER_END" or event=="CHALLENGE_MODE_COMPLETED" or event=="PVP_MATCH_COMPLETE" then
+  elseif event=="PLAYER_ENTERING_WORLD" or event=="ENCOUNTER_END" or event=="CHALLENGE_MODE_COMPLETED" or event=="PVP_MATCH_COMPLETE" then
     outgoingLocked=false
     scheduleOutgoing(0)
   elseif event=="CHAT_MSG_ADDON" then
