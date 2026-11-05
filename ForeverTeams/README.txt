@@ -9,7 +9,7 @@ The panel has a dark Ex Inferno theme; selecting a team changes the header
 accent to that team's chosen color.
 Keep the folder named ForeverTeams so existing SavedVariables are preserved.
 Each participating guild member needs the addon installed for live sync.
-Your Teams lists teams you belong to and teams you lead. Guild-note assignments require the exact Color - Name format, such as Blue - DiscordName. Member-rank and higher characters without a valid assignment appear in Free Agents. Only characters with the Initiate guild rank appear in Needs Onboarding. Other Teams lists
+Your Teams lists teams you belong to and teams you lead. Guild-note assignments require the exact Color - Name format, such as Blue - DiscordName or Crimson - DiscordName; an optional Team prefix is also accepted. Member-rank and higher characters without a valid assignment appear in Free Agents. Only characters with the Initiate guild rank appear in Needs Onboarding. Other Teams lists
 the remaining guild teams; use the arrow buttons to browse more teams. Every
 guild member can select a team, see its roster names and online status, and
 apply to join. Private roster details require membership or guild officer rank.
