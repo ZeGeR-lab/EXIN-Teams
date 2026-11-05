@@ -8,6 +8,7 @@ FT.roster = {}
 FT.invitations = {}
 FT.requests = {}
 FT.events = {}
+FT.systemInfo = {}
 FT.personalEvents = {}
 FT.guildEvents = {}
 FT.guildDeleted = {}
@@ -300,7 +301,7 @@ function FT:IsGuildOfficer(who)
   -- Temporary developer override: the authenticated guild character name only.
   -- Guild notes and Discord names must never grant administrator access.
   if name==selfName() then
-    if name=="snoop-warg" and myGuild()=="Ex Inferno" then return true end
+    if name=="snoop-worg" and myGuild()=="Ex Inferno" then return true end
     -- GetGuildInfo works before the full roster is populated. Only use it
     -- for the logged-in character; remote users must match a roster entry.
     local guild,rank,index=GetGuildInfo("player")
@@ -351,6 +352,13 @@ function FT:CanManage(team, who)
   local role = self:Member(team, who)
   return team and (self:IsGuildOfficer(who) or
     (team.owner == norm(who) and (team.delegatedOwner==norm(who) or self:CanOwnTeam(who, team.name, team.color))) or role == "officer")
+end
+function FT:CanEditInfo(team, who)
+  if not team then return false end
+  if team.id=="system-free-agents" or team.id=="system-needs-onboarding" then
+    return self:IsGuildOfficer(who)
+  end
+  return self:CanManage(team,who)
 end
 local function emit(channel, target, op, ...)
   if not myGuild() then return end
@@ -415,6 +423,7 @@ local function save()
     FT.db.profiles = FT.profiles
     FT.db.attunements = FT.attunements
     FT.db.deleted = FT.deleted
+    FT.db.systemInfo = FT.systemInfo
   end
 end
 local function clearPending(id, who)
@@ -506,6 +515,16 @@ local function apply(op, f, actor)
       if current.id==f[2] then table.remove(FT.guildEvents,i); break end
     end
     FT.guildDeleted[f[2]]=true
+    save(); FT:Refresh(); return
+  end
+  if op == "INFO" then
+    local id=f[2]
+    local system=id=="system-free-agents" or id=="system-needs-onboarding"
+    local target=system and {id=id} or FT.teams[id]
+    if not target or not FT:CanEditInfo(target,actor) or
+      not valid(f[3],70) or not valid(f[4],70) then return end
+    FT.systemInfo=FT.systemInfo or {}
+    FT.systemInfo[id]={schedule=f[3],contact=f[4],updated=time(),by=actor}
     save(); FT:Refresh(); return
   end
   if op == "ATTUNE" then
@@ -768,6 +787,10 @@ local function syncTeams()
   if info then sendPrivate("PREF", selfName(), info.availability, info.interest) end
   local delay = 0
   local pendingPackets = {}
+  for _, systemID in ipairs({"system-free-agents","system-needs-onboarding"}) do
+    local info=FT.systemInfo and FT.systemInfo[systemID]
+    if info then table.insert(pendingPackets,{"INFO",systemID,info.schedule or "",info.contact or ""}) end
+  end
   for _, event in ipairs(FT.guildEvents) do
     if event.owner==selfName() then
       table.insert(pendingPackets,{"GUILD_EVENT",event.id,event.when,event.title})
@@ -791,6 +814,10 @@ local function syncTeams()
     if FT:IsGuildOfficer(selfName()) and team.delegatedOwner and team.ownerChangedAt then
       table.insert(pendingPackets,{"NEW",id,team.name,team.focus,(team.motd or ""):sub(1,70),selfName(),FT:Color(team.color).name})
       table.insert(pendingPackets,{"TRANSFER",id,team.owner,tostring(team.ownerChangedAt)})
+    end
+    if FT:CanEditInfo(team,selfName()) and FT.systemInfo and FT.systemInfo[id] then
+      local info=FT.systemInfo[id]
+      table.insert(pendingPackets,{"INFO",id,info.schedule or "",info.contact or ""})
     end
     if team.owner == selfName() then
       local packets = {{"NEW", id, team.name, team.focus, team.motd, team.owner, FT:Color(team.color).name},
@@ -958,6 +985,8 @@ function FT:OpenGuild()
   self.attunements = self.db.attunements
   self.db.deleted = self.db.deleted or {}
   self.deleted = self.db.deleted
+  self.db.systemInfo = self.db.systemInfo or {}
+  self.systemInfo = self.db.systemInfo
   self.db.requests = self.db.requests or {}
   self.db.invitations = self.db.invitations or {}
   self.requests = self.db.requests
