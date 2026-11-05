@@ -31,8 +31,8 @@ local function flush()
     item.client.eventHandler(nil,"CHAT_MSG_ADDON",item.prefix,item.message,item.channel,item.sender)
   end
 end
-local function newClient(name)
-  local client={name=name,online=true,frames={},saved={},timers={}}
+local function newClient(name,saved)
+  local client={name=name,online=true,frames={},saved=saved or {},timers={}}
   local env={}
   setmetatable(env,{__index=_G})
   env._G=env
@@ -271,5 +271,23 @@ member.eventHandler(nil,"PLAYER_ENTERING_WORLD")
 runTimers(member)
 flush()
 assert(snoop.LT.teams["retry-team"].focus=="Encounter Retry","encounter-locked addon packets should flush after returning to the world")
+
+-- A pending team-manager change survives logout/reload while addon messages are locked.
+member.nextSendResult=11
+member.LT:Act("FOCUS","retry-team","Reload Persisted")
+local savedGuild=member.saved["Ex Inferno@AeriePeak"]
+assert(savedGuild and savedGuild.pendingMessages and #savedGuild.pendingMessages>0,
+  "lockdown-rejected packets should be saved for the current guild")
+member.online=false
+local restarted=newClient("Member-AeriePeak",member.saved)
+table.insert(clients,restarted)
+assert(restarted.saved["Ex Inferno@AeriePeak"].pendingMessages==savedGuild.pendingMessages,
+  "reloaded client should restore the pending guild message queue")
+runTimers(restarted)
+flush()
+assert(snoop.LT.teams["retry-team"].focus=="Reload Persisted",
+  "a pending team-manager change should reach other clients after addon reload")
+assert(#restarted.saved["Ex Inferno@AeriePeak"].pendingMessages==0,
+  "successfully submitted pending messages should be removed from SavedVariables")
 
 print("MultiClientSync.spec.lua: all two-client synchronization tests passed")
