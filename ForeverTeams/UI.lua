@@ -181,7 +181,7 @@ local header = line(teamPage, 210, -50, 470)
 header:SetFontObject(GameFontNormalLarge)
 local message = line(teamPage, 210, -78, 475, "small")
 message:SetHeight(38)
-local teamRows, rosterRows, requestRows, eventRows = {}, {}, {}, {}
+local teamRows, rosterRows, requestRows = {}, {}, {}
 local rosterHover, requestHover = {}, {}
 local function ask(titleText, default, callback)
   StaticPopupDialogs.FOREVER_TEAMS_INPUT = {
