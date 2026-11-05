@@ -524,7 +524,8 @@ local function apply(op, f, actor)
     local system=id=="system-free-agents" or id=="system-needs-onboarding"
     local target=system and {id=id} or FT.teams[id]
     if not target or not FT:CanEditInfo(target,actor) or
-      not valid(f[3],70) or not valid(f[4],70) then return end
+      type(f[3])~="string" or #f[3]>70 or f[3]:find("[|\\r\\n]") or
+      type(f[4])~="string" or #f[4]>70 or f[4]:find("[|\\r\\n]") then return end
     FT.systemInfo=FT.systemInfo or {}
     FT.systemInfo[id]={schedule=f[3],contact=f[4],updated=time(),by=actor}
     save(); FT:Refresh(); return
@@ -765,7 +766,12 @@ local function apply(op, f, actor)
 end
 function FT:Act(op, ...)
   local fields = {op, ...}
-  for _, value in ipairs(fields) do if not valid(value, 150) then self:Notice("That entry is too long or contains an unsupported character."); return end end
+  for index, value in ipairs(fields) do
+    local allowEmptyInfo=(op=="INFO" and (index==3 or index==4))
+    if type(value)~="string" or (not allowEmptyInfo and #value==0) or #value>150 or value:find("[|\\r\\n]") then
+      self:Notice("That entry is too long or contains an unsupported character."); return
+    end
+  end
   apply(op, fields, selfName())
   -- Do not broadcast a rejected duplicate or invalid local creation.
   if op=="NEW" and not self.teams[fields[2]] then return end
