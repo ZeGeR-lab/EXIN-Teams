@@ -230,7 +230,7 @@ local function scheduleOutgoing(delay)
   C_Timer.After(delay,function()
     outgoingTimer=false
     local function flush()
-      if outgoingLocked then return end
+      if outgoingLocked or not guild() then return end
       while #outgoingQueue>0 do
         local packet=outgoingQueue[1]
         local result
