@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.6.0 — 2026-11-05
+## 0.6.1 — 2026-11-05
 
 - Make team rosters vertically scrollable so larger teams can be browsed without truncating the member list.
 - Show only guild members at the Member rank or higher in actual team rosters; retain the special onboarding categories for lower-ranked guild members.
