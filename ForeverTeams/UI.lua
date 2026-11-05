@@ -191,7 +191,11 @@ local function ask(titleText, default, callback)
     whileDead=true, hideOnEscape=true, preferredIndex=3,
     OnShow=function(dialog)
       local box = dialog.EditBox or dialog.editBox
-      if box then box:SetText(default or ""); box:SetFocus() end
+      if box then
+        box:SetMaxLetters(48)
+        box:SetText(default or "")
+        box:SetFocus()
+      end
     end,
     OnAccept=function(dialog)
       local box = dialog.EditBox or dialog.editBox
