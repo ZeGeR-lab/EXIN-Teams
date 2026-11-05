@@ -247,13 +247,18 @@ local function formatSchedule(value)
   if #days==0 then return "No raid days selected." end
   local startTime=string.format("%d:%02d %s",data.startHour,data.startMinute,data.startAMPM)
   local endTime=string.format("%d:%02d %s",data.endHour,data.endMinute,data.endAMPM)
-  return table.concat(days,", ").."\\n"..startTime.." – "..endTime.." "..(zoneNames[data.zone] or data.zone).." time"
+  return table.concat(days,", ").."\n"..startTime.." – "..endTime.." "..(zoneNames[data.zone] or data.zone).." time"
 end
 local function drawTeamInfo(team)
   if not team then teamInfoPanel:Hide(); return end
-  local info=FT.systemInfo and FT.systemInfo[team.id] or {}
+  local info=(FT.systemInfo and FT.systemInfo[team.id]) or
+    (FT.db and FT.db.systemInfo and FT.db.systemInfo[team.id]) or {}
+  local scheduleText=formatSchedule(info.schedule)
+  if info.schedule and info.schedule~="" and not decodeSchedule(info.schedule) then
+    scheduleText=info.schedule
+  end
   teamInfoTitle:SetText("|cff9bdd00"..team.name.."  •  TEAM INFO|r")
-  teamInfoSchedule:SetText("|cffffd36aRAID DAYS / TIMES|r\n"..formatSchedule(info.schedule))
+  teamInfoSchedule:SetText("|cffffd36aRAID DAYS / TIMES|r\n"..scheduleText)
   teamInfoContact:SetText("|cffffd36aJOIN / CONTACT|r\n"..((info.contact and info.contact~="") and info.contact or "No contact listed yet."))
   teamInfoEdit:SetShown(FT:CanEditInfo(team,FT:SelfName()) and true or false)
 end
