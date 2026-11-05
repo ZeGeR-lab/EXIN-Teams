@@ -38,7 +38,12 @@ jobs:
           VERSION=$(sed -n 's/^## Version: //p' EXINTeamsLite/EXINTeamsLite.toc)
           mkdir -p package
           mkdir -p package/EXINTeamsLite
-          cp EXINTeamsLite/*.lua EXINTeamsLite/*.toc package/EXINTeamsLite/
+          cp EXINTeamsLite/*.lua EXINTeamsLite/*.toc EXINTeamsLite/README.md package/EXINTeamsLite/
+          test -f package/EXINTeamsLite/EXINTeamsLite.toc
+          test -f package/EXINTeamsLite/Core.lua
+          test -f package/EXINTeamsLite/UI.lua
+          test -f package/EXINTeamsLite/README.md
+          test ! -e package/ForeverTeams
           cd package
           zip -r "EXINTeamsLite-${VERSION}.zip" EXINTeamsLite
       - name: Upload installation archive
