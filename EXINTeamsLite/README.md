@@ -19,7 +19,7 @@ Lightweight guild team and roster management for Ex Inferno.
 - Manage team members and team-specific roles.
 - Support multiple team memberships per character.
 - Use the guild public note as the primary team assignment. The expected note format is `TeamName - DiscordName`; role edits preserve primary membership provenance.
-- Search and scroll the guild roster, Officer permissions list, team list, and team member list; team selection stays consistent with active search filters.
+- Search and scroll the guild roster, Officer permissions list, team list, and team member list; filtering resets the relevant list to the top without resetting member scroll during unrelated refreshes.
 - Assign one of 33 temporary emblem placeholders to each team.
 - Edit or clear the team message; clearing it synchronizes to other clients.
 - Warn team managers that renaming a team does not automatically rewrite guild public notes.
@@ -30,9 +30,9 @@ Lightweight guild team and roster management for Ex Inferno.
 - Validate saved pending packets and discard queued messages from obsolete synchronization protocols after an upgrade.
 - Deduplicate repeated guild HELLO requests within each client session to prevent redundant full-roster synchronization bursts.
 - Read addon-message result codes from the final API return value for compatibility with deprecated wrappers.
-- Reject far-future synchronization revisions and sanitize previously persisted invalid revision values so one malformed update cannot block future team changes.
+- Reject unversioned and far-future metadata snapshots, and sanitize previously persisted invalid revision values so malformed updates cannot overwrite team data or block future changes.
 - Scope every addon message to the active guild and realm; all guild clients must update together when the synchronization protocol changes.
-- Resolve simultaneous same-name team creation deterministically using the lexicographically smallest team ID, with a tombstone for the losing ID.
+- Resolve simultaneous same-name team creation deterministically using the lexicographically smallest team ID, recording tombstones for losing IDs regardless of packet arrival order.
 - Resolve equal-timestamp ownership transfers deterministically by normalized actor identity; ownership revision and actor are replicated together.
 - Prevent a team owner from advancing guild-wide ownership history through a forged SYNC snapshot; only a Guild-wide Officer may advance that revision.
 
