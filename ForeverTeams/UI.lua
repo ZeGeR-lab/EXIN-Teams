@@ -98,13 +98,9 @@ local function selectPage(name)
   FT:Refresh()
 end
 pageButtons.teams = button(panel, "Teams", 215, -12, 70, function() selectPage("teams") end)
-local calendarTab=button(panel,"Calendar",290,-12,85,function()
-  if FT.ShowCalendar then FT:ShowCalendar() end
-end)
-pageButtons.attunements = button(panel, "Attunements", 380, -12, 100, function() selectPage("attunements") end)
-pageButtons.quests = button(panel, "Dungeon quests", 485, -12, 105, function() selectPage("quests") end)
-pageButtons.activity = button(panel,"All activity",595,-12,100,function() selectPage("activity") end)
-calendarTab:SetFrameLevel(panel:GetFrameLevel()+10)
+pageButtons.attunements = button(panel, "Attunements", 300, -12, 100, function() selectPage("attunements") end)
+pageButtons.quests = button(panel, "Dungeon quests", 410, -12, 105, function() selectPage("quests") end)
+pageButtons.activity = button(panel,"All activity",525,-12,100,function() selectPage("activity") end)
 for _, tab in pairs(pageButtons) do tab:SetFrameLevel(panel:GetFrameLevel()+10) end
 pageButtons.teams:LockHighlight()
 attunementPage:Hide()
@@ -206,18 +202,27 @@ local function ask(titleText, default, callback)
   }
   StaticPopup_Show("FOREVER_TEAMS_INPUT")
 end
-local function chosen() return FT.teams[FT.selected] end
+local systemTeams = {}
+local function chosen() return FT.teams[FT.selected] or systemTeams[FT.selected] end
 local function me() return FT:SelfName() end
-local function canSee(team) return FT:CanSeeDetails(team, me()) end
+local function isSystemTeam(team) return team and systemTeams[team.id] == team end
+local function canSee(team) return isSystemTeam(team) or FT:CanSeeDetails(team, me()) end
 local function sortedTeams()
   local list = {}
   for _, team in pairs(FT.teams) do table.insert(list, team) end
+  for _, team in pairs(systemTeams) do table.insert(list, team) end
   table.sort(list, function(a,b) return (a.name or "") < (b.name or "") end)
   return list
 end
 local function sortedMembers(team)
   local list = {}
-  for who in pairs(team.members) do table.insert(list, who) end
+  for who in pairs(team.members) do
+    local entry = FT.roster[who]
+    if isSystemTeam(team) or (entry and entry.noteTeam and
+      entry.noteTeam:lower() == tostring(team.color or ""):lower() and entry.discordName) then
+      table.insert(list, who)
+    end
+  end
   table.sort(list)
   return list
 end
@@ -376,13 +381,11 @@ for i=1,3 do
     end
   end)
 end
-local eventTitle = line(teamPage, 210, -475, 365)
-eventTitle:SetText("|cff9bdd00TEAM EVENTS|r  |cff8b9b8bserver time|r")
 card(guildActivityPage,20,-52,738,512)
 local allActivityTitle=line(guildActivityPage,36,-66,680)
 allActivityTitle:SetText("|cff9bdd00GUILD TEAM ACTIVITY|r  |cff8b9b8bUpdates from all visible teams|r")
 local allActivityInfo=line(guildActivityPage,36,-96,685,"small")
-allActivityInfo:SetText("Team changes and calendar events appear here. Member details remain restricted.")
+allActivityInfo:SetText("Public team changes appear here. Member details remain restricted.")
 local allActivityRows={}
 for i=1,16 do
   local row=line(guildActivityPage,36,-128-(i-1)*25,700,"small")
@@ -458,16 +461,6 @@ local activityButton=button(teamPage,"Activity log",580,-470,105,function()
   drawActivity()
   if FT.teams[FT.selected] and FT:CanSeeDetails(FT.teams[FT.selected],me()) then activityPanel:Show() end
 end)
-local eventButtons = {}
-for i=1,3 do
-  eventRows[i] = line(teamPage, 215, -495-(i-1)*22, 350, "small")
-  eventButtons[i] = button(teamPage,"Join",575,-489-(i-1)*22,75,function(self)
-    local team=chosen()
-    if team and team.members[me()] and self.eventID then
-      FT:Act("RSVP",team.id,self.eventID,self.attending and "no" or "yes")
-    end
-  end)
-end
 local controls = {}
 local function control(label,x,y,w,fn)
   local b=button(teamPage,label,x,y,w,fn)
@@ -551,9 +544,6 @@ control("Edit message",305,-442,105,function()
   local team=chosen(); if team and FT:CanManage(team,me()) then
     ask("Team message of the day",team.motd,function(s) FT:Act("MOTD",team.id,s) end)
   end
-end)
-control("Calendar",415,-442,90,function()
-  if FT.ShowCalendar then FT:ShowCalendar() end
 end)
 control("Team color",510,-442,100,function()
   local team=chosen(); if not team or not FT:CanManage(team,me()) then return end
@@ -782,9 +772,21 @@ local function drawQuests()
 end
 
 local function drawTeams()
+  local freeAgents = {id="system-free-agents",name="Free Agents",color="White",
+    focus="Guild roster",motd="Members without a valid Color - Name guild note.",owner="",members={},system=true}
+  local onboarding = {id="system-needs-onboarding",name="Needs Onboarding",color="Orange",
+    focus="Guild roster",motd="Guild members currently holding the Initiate rank.",owner="",members={},system=true}
+  for who, entry in pairs(FT.roster) do
+    if type(entry.rank)=="string" and entry.rank:lower()=="initiate" then
+      onboarding.members[who]="member"
+    elseif not entry.noteTeam or not entry.discordName then
+      freeAgents.members[who]="member"
+    end
+  end
+  systemTeams = {[freeAgents.id]=freeAgents,[onboarding.id]=onboarding}
   local mine, others={},{}
   for _, team in ipairs(sortedTeams()) do
-    if team.members[me()] or team.owner == me() then table.insert(mine,team)
+    if not isSystemTeam(team) and (team.members[me()] or team.owner == me()) then table.insert(mine,team)
     else table.insert(others,team) end
   end
   local list={}
@@ -819,10 +821,19 @@ local function drawTeams()
     FT.selected=mine[1].id
     team=mine[1]
   end
+  if not team and #others > 0 then
+    FT.selected=others[1].id
+    team=others[1]
+  end
   if not team then
-    header:SetText("Choose a team or create one")
-    message:SetText("Join multiple teams. Team data syncs among guild members running EXIN Teams.")
+    header:SetText("Guild roster")
+    message:SetText("Guild roster categories appear here after the roster loads.")
     accent:SetVertexColor(0.61, 0.86, 0.25)
+  elseif isSystemTeam(team) then
+    header:SetText("|cff" .. FT:Color(team.color).hex .. team.name .. "|r  •  " .. (team.focus or "Guild roster"))
+    message:SetText(team.motd or "")
+    local hex=FT:Color(team.color).hex
+    accent:SetVertexColor(tonumber(hex:sub(1,2),16)/255, tonumber(hex:sub(3,4),16)/255, tonumber(hex:sub(5,6),16)/255)
   else
     header:SetText("|cff" .. FT:Color(team.color).hex .. team.name .. "|r  •  " .. (team.focus or "General"))
     message:SetText("|cff8b9b8bLeader:|r " ..
@@ -833,7 +844,7 @@ local function drawTeams()
   end
   local members=team and sortedMembers(team) or {}
   local missingNotes={}
-  if team and canSee(team) then
+  if team and not isSystemTeam(team) and canSee(team) then
     for _, who in ipairs(members) do
       local entry=FT.roster[who]
       if not entry or not entry.noteTeam or not entry.discordName then
@@ -842,14 +853,14 @@ local function drawTeams()
     end
   end
   notesNeeded.missing=missingNotes
-  activityButton:SetShown(team ~= nil and canSee(team) and true or false)
-  notesNeeded:SetShown(team ~= nil and canSee(team) and #missingNotes > 0)
+  activityButton:SetShown(team ~= nil and not isSystemTeam(team) and canSee(team) and true or false)
+  notesNeeded:SetShown(team ~= nil and not isSystemTeam(team) and canSee(team) and #missingNotes > 0)
   notesNeeded:SetText("Notes needed ("..#missingNotes..")")
   newTeamButton:SetEnabled(FT:CanCreate(me()) and true or false)
-  participationButton:SetShown(team and team.owner==me() and true or false)
+  participationButton:SetShown(team and not isSystemTeam(team) and team.owner==me() and true or false)
   participationButton:SetText(team and team.members[me()] and "Leave active roster" or "Join active roster")
-  deleteButton:SetShown(FT:CanDelete(team,me()) and true or false)
-  transferButton:SetShown(team and FT:IsGuildOfficer(me()) and true or false)
+  deleteButton:SetShown(team and not isSystemTeam(team) and FT:CanDelete(team,me()) and true or false)
+  transferButton:SetShown(team and not isSystemTeam(team) and FT:IsGuildOfficer(me()) and true or false)
   rosterTitle:SetText("|cff9bdd00ROSTER|r  |cff8b9b8b"..#members.." members|r")
   for i,t in ipairs(rosterRows) do
     local who=members[i]
@@ -878,20 +889,9 @@ local function drawTeams()
     requestHover[i]:SetShown(who ~= nil and canSee(team) and true or false)
     t:SetText(who and ("|cffd9e5d3"..who.."|r") or "")
     requestButtons[i].applicant=who
-    requestButtons[i]:SetShown(who and team and FT:CanManage(team,me()) and true or false)
+    requestButtons[i]:SetShown(who and team and not isSystemTeam(team) and FT:CanManage(team,me()) and true or false)
   end
-  for i,t in ipairs(eventRows) do
-    local event=team and team.events[#team.events-(i-1)]
-    local attending=event and event.attendees and event.attendees[me()]
-    local count=0
-    if event then for _ in pairs(event.attendees or {}) do count=count+1 end end
-    t:SetText(event and (event.when and ("|cff9aabb4"..event.when.."|r  "..event.title.."  |cff8b9b8b("..count.." going)|r") or event.text or "") or "")
-    eventButtons[i].eventID=event and event.id
-    eventButtons[i].attending=attending
-    eventButtons[i]:SetShown(event and event.id and team.members[me()] and true or false)
-    eventButtons[i]:SetText(attending and "Leave" or "Join")
-  end
-  for _,b in ipairs(controls) do b:SetEnabled(team ~= nil) end
+  for _,b in ipairs(controls) do b:SetEnabled(team ~= nil and not isSystemTeam(team)) end
   local isMember=team and team.members[me()]
   local pending=team and FT.requests[team.id] and FT.requests[team.id][me()]
   applyButton:SetText(pending and "Pending" or "Apply")
