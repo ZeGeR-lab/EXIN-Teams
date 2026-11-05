@@ -168,6 +168,13 @@ local function rosterRefresh()
         end
       end
       local team=match[label]
+      -- A legacy/manual team can match by its display name while retaining an
+      -- unrelated saved color. Guild-note assignment is authoritative for
+      -- note-managed roster membership, so align the team color with the
+      -- parsed canonical note label before sortedMembers applies its filter.
+      if team then
+        team.color=FT:Color(group.name).name
+      end
       if not team then
         local id="note-"..norm(group.name)
         if not FT.deleted[id] then
