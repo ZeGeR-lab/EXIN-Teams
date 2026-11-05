@@ -350,9 +350,19 @@ function FT:CanSeeDetails(team, who)
   return team and (team.members[norm(who)] or team.owner == norm(who) or self:IsGuildOfficer(who))
 end
 function FT:CanManage(team, who)
+  if not team then return false end
+  if self:IsGuildOfficer(who) then return true end
+  -- A designated Team Leader is scoped to the team named by their guild note.
+  -- Do not let their membership/officer role grant management access elsewhere.
+  if self:IsTeamLeader(who) then
+    local entry=self.roster[norm(who)]
+    local assigned=entry and entry.noteTeam and entry.noteTeam:lower()
+    return assigned~=nil and assigned~="" and
+      (assigned==(team.color or ""):lower() or assigned==(team.name or ""):lower())
+  end
   local role = self:Member(team, who)
-  return team and (self:IsGuildOfficer(who) or
-    (team.owner == norm(who) and (team.delegatedOwner==norm(who) or self:CanOwnTeam(who, team.name, team.color))) or role == "officer")
+  return (team.owner == norm(who) and
+    (team.delegatedOwner==norm(who) or self:CanOwnTeam(who, team.name, team.color))) or role == "officer"
 end
 function FT:CanEditInfo(team, who)
   if not team then return false end
