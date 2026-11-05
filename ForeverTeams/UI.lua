@@ -785,7 +785,8 @@ local function drawTeams()
   for who, entry in pairs(FT.roster) do
     if type(entry.rank)=="string" and entry.rank:lower()=="initiate" then
       onboarding.members[who]="member"
-    elseif not entry.noteTeam or not entry.discordName then
+    end
+    if not entry.noteTeam or not entry.discordName then
       freeAgents.members[who]="member"
     end
   end
