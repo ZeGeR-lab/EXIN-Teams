@@ -526,7 +526,20 @@ local function apply(op, f, actor)
       type(f[3])~="string" or #f[3]>70 or f[3]:find("[|\\r\\n]") or
       type(f[4])~="string" or #f[4]>70 or f[4]:find("[|\\r\\n]") then return end
     FT.systemInfo=FT.systemInfo or {}
-    FT.systemInfo[id]={schedule=f[3],contact=f[4],updated=time(),by=actor}
+    local previous=FT.systemInfo[id] or {}
+    FT.systemInfo[id]={schedule=f[3],contact=f[4],motd=previous.motd,focus=previous.focus,color=previous.color,updated=time(),by=actor}
+    save(); FT:Refresh(); return
+  end
+  if op == "SYS_EDIT" then
+    local id=f[2]
+    if (id~="system-free-agents" and id~="system-needs-onboarding") or not FT:CanEditInfo({id=id},actor) or
+      type(f[3])~="string" or #f[3]>150 or f[3]:find("[|\\r\\n]") or
+      type(f[4])~="string" or #f[4]>48 or f[4]:find("[|\\r\\n]") or
+      type(f[5])~="string" or FT:Color(f[5]).name~=f[5] then return end
+    FT.systemInfo=FT.systemInfo or {}
+    local previous=FT.systemInfo[id] or {}
+    FT.systemInfo[id]={schedule=previous.schedule or "",contact=previous.contact or "",
+      motd=f[3],focus=f[4],color=f[5],updated=time(),by=actor}
     save(); FT:Refresh(); return
   end
   if op == "ATTUNE" then
@@ -796,7 +809,10 @@ local function syncTeams()
   local pendingPackets = {}
   for _, systemID in ipairs({"system-free-agents","system-needs-onboarding"}) do
     local info=FT.systemInfo and FT.systemInfo[systemID]
-    if info then table.insert(pendingPackets,{"INFO",systemID,info.schedule or "",info.contact or ""}) end
+    if info then
+      table.insert(pendingPackets,{"INFO",systemID,info.schedule or "",info.contact or ""})
+      if info.motd and info.focus and info.color then table.insert(pendingPackets,{"SYS_EDIT",systemID,info.motd,info.focus,info.color}) end
+    end
   end
   for _, event in ipairs(FT.guildEvents) do
     if event.owner==selfName() then
