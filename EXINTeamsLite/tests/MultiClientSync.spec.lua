@@ -278,6 +278,7 @@ member.LT:Act("FOCUS","retry-team","Reload Persisted")
 local savedGuild=member.saved["Ex Inferno@AeriePeak"]
 assert(savedGuild and savedGuild.pendingMessages and #savedGuild.pendingMessages>0,
   "lockdown-rejected packets should be saved for the current guild")
+assert(savedGuild.pendingProtocol==member.LT.PREFIX,"SavedVariables should record the synchronization protocol for pending packets")
 assert(savedGuild.pendingMessages[1].prefix==member.LT.PREFIX,
   "persisted messages should retain the protocol prefix they were created with")
 member.online=false
@@ -294,8 +295,9 @@ assert(#restarted.saved["Ex Inferno@AeriePeak"].pendingMessages==0,
 
 -- Pending packets from a previous synchronization protocol must not be replayed.
 restarted.online=false
+restarted.saved["Ex Inferno@AeriePeak"].pendingProtocol="EXINL1"
 restarted.saved["Ex Inferno@AeriePeak"].pendingMessages={
-  {prefix="EXINL1",message="Ex Inferno@AeriePeak|FOCUS|retry-team|Stale Protocol|9999",channel="GUILD"}
+  {message="Ex Inferno@AeriePeak|FOCUS|retry-team|Stale Protocol|9999",channel="GUILD"}
 }
 local protocolRestart=newClient("Member-AeriePeak",restarted.saved)
 table.insert(clients,protocolRestart)
