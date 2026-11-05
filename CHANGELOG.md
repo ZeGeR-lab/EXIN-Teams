@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0 — 2026-11-05
+
+- Temporarily remove the calendar interface and stop loading Calendar.lua; retain existing SavedVariables for compatibility.
+- Require a recognized color followed by ` - ` and a non-empty name in guild notes before assigning a character to a team.
+- Add automatic Free Agents and Needs Onboarding roster categories; Initiate-ranked characters appear in Needs Onboarding.
+- Hide team roster entries whose current guild note does not explicitly assign them to that team's color.
+
+
 ## 0.5.9 — 2026-09-28
 
 - Replace the recruitment popup's stretched one-line input border with a framed multiline editor; keep the message and buttons inside the dialog and display a 240-character counter.
