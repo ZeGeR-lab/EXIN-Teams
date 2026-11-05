@@ -245,10 +245,15 @@ assert(snoop.LT.teams["retry-team"].focus=="Throttle Retry","throttled addon pac
 member.nextSendResult=11
 member.LT:Act("FOCUS","retry-team","Encounter Retry")
 assert(member.LT.teams["retry-team"].focus=="Encounter Retry","local changes should apply during encounter lockdown")
-member.nextSendResult=0
+member.nextSendResult=11
 member.eventHandler(nil,"ENCOUNTER_END")
 runTimers(member)
 flush()
-assert(snoop.LT.teams["retry-team"].focus=="Encounter Retry","encounter-locked addon packets should flush after the encounter ends")
+assert(snoop.LT.teams["retry-team"].focus=="Throttle Retry","ending an encounter inside an instance must not bypass addon-message lockdown")
+member.nextSendResult=0
+member.eventHandler(nil,"PLAYER_ENTERING_WORLD")
+runTimers(member)
+flush()
+assert(snoop.LT.teams["retry-team"].focus=="Encounter Retry","encounter-locked addon packets should flush after returning to the world")
 
 print("MultiClientSync.spec.lua: all two-client synchronization tests passed")
