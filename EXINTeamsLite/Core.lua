@@ -175,6 +175,43 @@ function LT:CanManage(team, who)
   return self:IsGuildOfficer(who) or team.owner==who or self:IsTeamLeader(who,team)
 end
 function LT:CanDelete(team, who) return team and self:IsGuildOfficer(who) end
+local outgoingQueue={}
+local outgoingTimer=false
+local outgoingLocked=false
+local function sendResultCode(name,fallback)
+  return Enum and Enum.SendAddonMessageResult and Enum.SendAddonMessageResult[name] or fallback
+end
+local function scheduleOutgoing(delay)
+  if outgoingTimer or outgoingLocked or not C_Timer or not C_Timer.After then return end
+  outgoingTimer=true
+  C_Timer.After(delay,function()
+    outgoingTimer=false
+    local function flush()
+      if outgoingLocked then return end
+      while #outgoingQueue>0 do
+        local packet=table.remove(outgoingQueue,1)
+        local result
+        if C_ChatInfo and C_ChatInfo.SendAddonMessage then
+          result=C_ChatInfo.SendAddonMessage(LT.PREFIX,packet.message,packet.channel,packet.target)
+        elseif SendAddonMessage then
+          SendAddonMessage(LT.PREFIX,packet.message,packet.channel,packet.target)
+        else
+          return
+        end
+        if result==sendResultCode("AddOnMessageLockdown",11) then
+          table.insert(outgoingQueue,1,packet)
+          outgoingLocked=true
+          return
+        elseif result==sendResultCode("AddonMessageThrottle",3) then
+          table.insert(outgoingQueue,1,packet)
+          scheduleOutgoing(1.1)
+          return
+        end
+      end
+    end
+    flush()
+  end)
+end
 local function emit(channel,target,op,...)
   if not guild() then return end
   local fields={op,...}
@@ -183,8 +220,27 @@ local function emit(channel,target,op,...)
   if scope:find("|",1,true) or scope:find("\r",1,true) or scope:find("\n",1,true) then return end
   local msg=scope.."|"..table.concat(fields,"|")
   if #msg>240 then LT:Notice("A sync packet was too large and was not sent."); return end
-  if C_ChatInfo and C_ChatInfo.SendAddonMessage then C_ChatInfo.SendAddonMessage(LT.PREFIX,msg,channel,target)
-  elseif SendAddonMessage then SendAddonMessage(LT.PREFIX,msg,channel,target) end
+  local packet={message=msg,channel=channel,target=target}
+  if #outgoingQueue>0 or outgoingLocked then
+    table.insert(outgoingQueue,packet)
+    scheduleOutgoing(1.1)
+    return
+  end
+  local result
+  if C_ChatInfo and C_ChatInfo.SendAddonMessage then
+    result=C_ChatInfo.SendAddonMessage(LT.PREFIX,msg,channel,target)
+  elseif SendAddonMessage then
+    SendAddonMessage(LT.PREFIX,msg,channel,target)
+  else
+    return
+  end
+  if result==sendResultCode("AddOnMessageLockdown",11) then
+    outgoingLocked=true
+    table.insert(outgoingQueue,packet)
+  elseif result==sendResultCode("AddonMessageThrottle",3) then
+    table.insert(outgoingQueue,packet)
+    scheduleOutgoing(1.1)
+  end
 end
 local function send(op,...) emit("GUILD",nil,op,...) end
 local function save()
@@ -477,7 +533,10 @@ function LT:OpenGuild()
     EXINTeamsLiteDB[g]=nil
   end
   EXINTeamsLiteDB[key]=EXINTeamsLiteDB[key] or {}
-  if activeGuildKey~=key then self.selected=nil end
+  if activeGuildKey~=key then
+    self.selected=nil
+    outgoingQueue={}; outgoingLocked=false; outgoingTimer=false
+  end
   activeGuildKey=key
   self.db=EXINTeamsLiteDB[key]
   self.teams=self.db.teams or {}; self.authorizedOfficers=self.db.authorizedOfficers or {}
@@ -500,6 +559,9 @@ frame:RegisterEvent("PLAYER_LOGIN")
 frame:RegisterEvent("PLAYER_GUILD_UPDATE")
 frame:RegisterEvent("GUILD_ROSTER_UPDATE")
 frame:RegisterEvent("CHAT_MSG_ADDON")
+frame:RegisterEvent("ENCOUNTER_END")
+frame:RegisterEvent("CHALLENGE_MODE_COMPLETED")
+frame:RegisterEvent("PVP_MATCH_COMPLETE")
 frame:SetScript("OnEvent",function(_,event,...)
   if event=="PLAYER_LOGIN" then
     if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then C_ChatInfo.RegisterAddonMessagePrefix(LT.PREFIX)
@@ -509,6 +571,9 @@ frame:SetScript("OnEvent",function(_,event,...)
   elseif event=="PLAYER_GUILD_UPDATE" then LT:OpenGuild()
   elseif event=="GUILD_ROSTER_UPDATE" then
     if not guild() then clearGuildRuntime() else rosterRefresh() end
+  elseif event=="ENCOUNTER_END" or event=="CHALLENGE_MODE_COMPLETED" or event=="PVP_MATCH_COMPLETE" then
+    outgoingLocked=false
+    scheduleOutgoing(0)
   elseif event=="CHAT_MSG_ADDON" then
     local prefix,message,channel,sender=...
     if prefix~=LT.PREFIX or (channel~="GUILD" and channel~="WHISPER") or type(message)~="string" or #message>240 then return end
