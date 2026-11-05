@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.5 — 2026-11-05
+
+- Add a seven-day toggle schedule editor with hour, minute, AM/PM, and North American time-zone selectors for team raid information.
+- Display saved raid days and time-zone-aware start times in the team information panel, alongside the saved recruitment contact.
+- Enable authorized administrators to edit messages, focus, and color for Free Agents and Needs Onboarding, as well as regular teams.
+
+
 ## 0.6.1 — 2026-11-05
 
 - Keep the Needs Onboarding category exclusive to Initiate-ranked guild members; list unassigned Member-rank and higher characters as Free Agents.
