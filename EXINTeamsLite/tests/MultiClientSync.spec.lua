@@ -232,21 +232,23 @@ local function runTimers(client)
     table.remove(client.timers,1)()
   end
 end
+snoop.LT:Act("NEW","retry-team","Retry Team","Raid","","Member-AeriePeak","Blue","E01")
+flush()
 member.nextSendResult=3
-member.LT:Act("FOCUS","crimson","Throttle Retry")
-assert(member.LT.teams.crimson.focus=="Throttle Retry","local changes should apply before a throttled send is retried")
+member.LT:Act("FOCUS","retry-team","Throttle Retry")
+assert(member.LT.teams["retry-team"].focus=="Throttle Retry","local changes should apply before a throttled send is retried")
 member.nextSendResult=0
 runTimers(member)
 flush()
-assert(snoop.LT.teams.crimson.focus=="Throttle Retry","throttled addon packets should be retried and delivered")
+assert(snoop.LT.teams["retry-team"].focus=="Throttle Retry","throttled addon packets should be retried and delivered")
 
 member.nextSendResult=11
-member.LT:Act("FOCUS","crimson","Encounter Retry")
-assert(member.LT.teams.crimson.focus=="Encounter Retry","local changes should apply during encounter lockdown")
+member.LT:Act("FOCUS","retry-team","Encounter Retry")
+assert(member.LT.teams["retry-team"].focus=="Encounter Retry","local changes should apply during encounter lockdown")
 member.nextSendResult=0
 member.eventHandler(nil,"ENCOUNTER_END")
 runTimers(member)
 flush()
-assert(snoop.LT.teams.crimson.focus=="Encounter Retry","encounter-locked addon packets should flush after the encounter ends")
+assert(snoop.LT.teams["retry-team"].focus=="Encounter Retry","encounter-locked addon packets should flush after the encounter ends")
 
 print("MultiClientSync.spec.lua: all two-client synchronization tests passed")
