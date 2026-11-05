@@ -228,4 +228,14 @@ currentRealm="AeriePeak"
 assert(LT:OpenGuild(),"returning to the original guild should reopen its save")
 assert(LT.teams.team2~=nil and LT.teams.moon==nil,"returning should restore the original realm's teams only")
 assert(LT.authorizedOfficers["officer-aeriepeak"]~=nil,"the original guild's saved authorization state should be restored")
+-- Existing saves with a previously poisoned future revision must recover on reload.
+LT.teams.team2.metaChangedAt=999999999
+LT.teams.team2.metaChangedBy="forged-actor"
+LT.teams.team2.ownerChangedAt=999999999
+LT.teams.team2.ownerChangedBy="forged-actor"
+assert(LT:OpenGuild(),"reopening the current guild should succeed")
+assert(LT.teams.team2.metaChangedAt==0 and LT.teams.team2.metaChangedBy==nil,
+  "opening saved data must clear a poisoned future metadata revision")
+assert(LT.teams.team2.ownerChangedAt==0 and LT.teams.team2.ownerChangedBy==nil,
+  "opening saved data must clear a poisoned future ownership revision")
 print("CoreSync.spec.lua: all synchronization and permission tests passed")
