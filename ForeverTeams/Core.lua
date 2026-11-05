@@ -2,7 +2,7 @@ local ADDON, FT = ...
 _G.ForeverTeams = FT
 FT.version = 1
 local addonMetadata=C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
-FT.versionString=(addonMetadata and addonMetadata(ADDON,"Version")) or "0.6.8"
+FT.versionString=(addonMetadata and addonMetadata(ADDON,"Version")) or "0.6.9"
 FT.teams = {}
 FT.roster = {}
 FT.invitations = {}
@@ -780,7 +780,7 @@ function FT:Act(op, ...)
   local fields = {op, ...}
   for index, value in ipairs(fields) do
     local allowEmptyInfo=(op=="INFO" and (index==3 or index==4))
-    if type(value)~="string" or (not allowEmptyInfo and #value==0) or #value>150 or value:find("[|\\r\\n]") then
+    if type(value)~="string" or (not allowEmptyInfo and #value==0) or #value>150 or value:find("[|\r\n]") then
       self:Notice("That entry is too long or contains an unsupported character."); return
     end
   end
