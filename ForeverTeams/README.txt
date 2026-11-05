@@ -157,3 +157,5 @@ or install from GitHub. The diagnostic /exin rankcheck command still works.
 RECRUITMENT EDITOR (0.5.9)
 The recruitment message now stays inside a framed multiline text area with
 a character counter and the existing Save/Post to Trade controls.
+
+Free Agents includes only Member-or-higher guild members who have no valid Color - Name assignment and are not already members of a real team. Initiates appear only under Needs Onboarding.
