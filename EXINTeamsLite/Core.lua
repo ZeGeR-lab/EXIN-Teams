@@ -1,7 +1,7 @@
 local ADDON, LT = ...
 _G.EXINTeamsLite = LT
 LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.5.37"
-LT.sessionID=tostring({})
+LT.sessionID=tostring(time()).."-"..tostring(GetTime and GetTime() or 0).."-"..tostring({})
 LT.PREFIX = "EXINL2" -- Realm-scoped protocol; avoids Full collisions and rejects legacy unscoped packets.
 LT.teams, LT.roster, LT.authorizedOfficers = {}, {}, {}
 LT.selected, LT.db = nil, nil
