@@ -91,7 +91,7 @@ assert(snoop.LT.teams.crimson~=nil,"creator should have the new team")
 assert(member.LT.teams.crimson~=nil,"guild broadcast should deliver the new team to the connected client")
 
 -- Member reconnects; the authoritative admin responds with a complete snapshot.
-member.env.C_ChatInfo.SendAddonMessage(member.LT.PREFIX,"Ex Inferno@AeriePeak|HELLO|"..member.LT:SelfName(),"GUILD")
+member.env.C_ChatInfo.SendAddonMessage(member.LT.PREFIX,"Ex Inferno@AeriePeak|HELLO|"..member.LT:SelfName().."|session-1","GUILD")
 flush()
 assert(member.LT.teams.crimson~=nil,"HELLO handshake should replicate the team")
 assert(member.LT.teams.crimson.owner=="member-aeriepeak","team owner should replicate")
@@ -180,7 +180,7 @@ assert(snoop.LT.teams.crimson.owner=="officer-aeriepeak","transferring Officer s
 assert(snoop.LT.teams.crimson.members["officer-aeriepeak"]=="leader","new owner should receive Leader role")
 assert(snoop.LT.teams.crimson.members["member-aeriepeak"]=="officer","previous owner should be demoted to Officer")
 member.online=true
-member.env.C_ChatInfo.SendAddonMessage(member.LT.PREFIX,"Ex Inferno@AeriePeak|HELLO|"..member.LT:SelfName(),"GUILD")
+member.env.C_ChatInfo.SendAddonMessage(member.LT.PREFIX,"Ex Inferno@AeriePeak|HELLO|"..member.LT:SelfName().."|session-2","GUILD")
 flush()
 assert(member.LT.teams.crimson.owner=="officer-aeriepeak","offline former owner should receive the new owner on reconnect")
 assert(member.LT.teams.crimson.members["officer-aeriepeak"]=="leader","reconnect snapshot should restore new owner Leader role")
@@ -211,7 +211,7 @@ flush()
 assert(snoop.LT.teams.crimson==nil and snoop.LT.deleted.crimson~=nil,"admin deletion should create a tombstone")
 local sentBeforeReconnect=#sent
 member.online=true
-member.env.C_ChatInfo.SendAddonMessage(member.LT.PREFIX,"Ex Inferno@AeriePeak|HELLO|"..member.LT:SelfName(),"GUILD")
+member.env.C_ChatInfo.SendAddonMessage(member.LT.PREFIX,"Ex Inferno@AeriePeak|HELLO|"..member.LT:SelfName().."|session-3","GUILD")
 flush()
 local tombstoneReplay=false
 for i=sentBeforeReconnect+1,#sent do
