@@ -32,7 +32,7 @@ local function flush()
   end
 end
 local function newClient(name)
-  local client={name=name,online=true,frames={},saved={}}
+  local client={name=name,online=true,frames={},saved={},timers={}}
   local env={}
   setmetatable(env,{__index=_G})
   env._G=env
@@ -54,11 +54,18 @@ local function newClient(name)
   env.wipe=function(t) for k in pairs(t) do t[k]=nil end end
   env.time=function() return 2000 end
   env.GetTime=function() return 1 end
-  env.C_Timer={After=function(_,fn) end}
+  env.C_Timer={After=function(_,fn) table.insert(client.timers,fn) end}
+  env.Enum={SendAddonMessageResult={AddonMessageThrottle=3,AddOnMessageLockdown=11}}
   env.C_ChatInfo={
     RegisterAddonMessagePrefix=function() end,
     SendAddonMessage=function(prefix,message,channel,target)
+      if client.nextSendResult~=nil then
+        local result=client.nextSendResult
+        client.nextSendResult=nil
+        if result~=0 then return result end
+      end
       deliver(client,prefix,message,channel,target)
+      return 0
     end
   }
   local chunk=assert(loadfile("EXINTeamsLite/Core.lua"))
@@ -215,4 +222,31 @@ assert(member.LT.deleted.crimson~=nil,"reconnect should persist the deletion tom
 local stale="Ex Inferno@AeriePeak|NEW|crimson|Old Crimson|Raid||Member-AeriePeak|Blue|E01"
 member.eventHandler(nil,"CHAT_MSG_ADDON",member.LT.PREFIX,stale,"GUILD","Snoop Wharg-AeriePeak")
 assert(member.LT.teams.crimson==nil,"stale NEW must not resurrect a tombstoned team")
+-- Modern clients can reject addon messages during encounter lockdown or throttling.
+-- Lite must retain these packets and deliver them when the API permits communication.
+local function runTimers(client)
+  local guard=0
+  while #client.timers>0 do
+    guard=guard+1
+    assert(guard<100,"outgoing retry timer loop detected")
+    table.remove(client.timers,1)()
+  end
+end
+member.nextSendResult=3
+member.LT:Act("FOCUS","crimson","Throttle Retry")
+assert(member.LT.teams.crimson.focus=="Throttle Retry","local changes should apply before a throttled send is retried")
+member.nextSendResult=0
+runTimers(member)
+flush()
+assert(snoop.LT.teams.crimson.focus=="Throttle Retry","throttled addon packets should be retried and delivered")
+
+member.nextSendResult=11
+member.LT:Act("FOCUS","crimson","Encounter Retry")
+assert(member.LT.teams.crimson.focus=="Encounter Retry","local changes should apply during encounter lockdown")
+member.nextSendResult=0
+member.eventHandler(nil,"ENCOUNTER_END")
+runTimers(member)
+flush()
+assert(snoop.LT.teams.crimson.focus=="Encounter Retry","encounter-locked addon packets should flush after the encounter ends")
+
 print("MultiClientSync.spec.lua: all two-client synchronization tests passed")
