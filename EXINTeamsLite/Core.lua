@@ -1,6 +1,7 @@
 local ADDON, LT = ...
 _G.EXINTeamsLite = LT
 LT.versionString = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "0.5.37"
+LT.sessionID=tostring({})
 LT.PREFIX = "EXINL2" -- Realm-scoped protocol; avoids Full collisions and rejects legacy unscoped packets.
 LT.teams, LT.roster, LT.authorizedOfficers = {}, {}, {}
 LT.selected, LT.db = nil, nil
@@ -573,7 +574,7 @@ function LT:Toggle()
   elseif self:OpenGuild() then self.panel:Show(); self:Refresh(); self:CheckConnection() end
 end
 function LT:CheckConnection()
-  if guild() then send("HELLO",selfName()) end
+  if guild() then send("HELLO",selfName(),self.sessionID) end
 end
 frame:RegisterEvent("PLAYER_LOGIN")
 frame:RegisterEvent("PLAYER_GUILD_UPDATE")
@@ -606,9 +607,9 @@ frame:SetScript("OnEvent",function(_,event,...)
     if f[1]=="HELLO" then
       -- A guild member can request a full roster snapshot, but repeated HELLO
       -- packets must not flood every Officer's outgoing synchronization queue.
-      local now=time()
-      if helloAt[actor] and now-helloAt[actor]<15 then return end
-      helloAt[actor]=now
+      local session=f[3] or "legacy"
+      if helloAt[actor]==session then return end
+      helloAt[actor]=session
       emit("WHISPER",actor,"PONG"); syncTeams(); return
     end
     if f[1]=="PONG" then return end
