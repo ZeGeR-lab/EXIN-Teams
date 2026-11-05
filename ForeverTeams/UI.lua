@@ -180,7 +180,9 @@ local header = line(teamPage, 210, -50, 470)
 
 header:SetFontObject(GameFontNormalLarge)
 local message = line(teamPage, 210, -78, 475, "small")
-message:SetHeight(38)
+message:SetHeight(44)
+message:SetJustifyV("TOP")
+message:SetWordWrap(true)
 local teamRows, rosterRows, requestRows = {}, {}, {}
 local rosterHover, requestHover = {}, {}
 local function ask(titleText, default, callback)
@@ -207,18 +209,20 @@ local function chosen() return FT.teams[FT.selected] or systemTeams[FT.selected]
 local function me() return FT:SelfName() end
 local function isSystemTeam(team) return team and systemTeams[team.id] == team end
 local teamInfoPanel=CreateFrame("Frame",nil,UIParent,"BackdropTemplate")
-teamInfoPanel:SetSize(430,235)
+teamInfoPanel:SetSize(460,285)
 teamInfoPanel:SetPoint("CENTER")
 teamInfoPanel:SetFrameStrata("FULLSCREEN_DIALOG")
 teamInfoPanel:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",edgeFile="Interface\\DialogFrame\\UI-DialogBox-Border",edgeSize=24,
   insets={left=8,right=8,top=8,bottom=8}})
 teamInfoPanel:Hide()
-local teamInfoTitle=line(teamInfoPanel,20,-20,370)
-local teamInfoSchedule=line(teamInfoPanel,22,-65,380,"small")
-teamInfoSchedule:SetHeight(48)
+local teamInfoTitle=line(teamInfoPanel,20,-20,410)
+local teamInfoSchedule=line(teamInfoPanel,22,-58,410,"small")
+teamInfoSchedule:SetHeight(64)
+teamInfoSchedule:SetWordWrap(true)
 teamInfoSchedule:SetJustifyV("TOP")
-local teamInfoContact=line(teamInfoPanel,22,-125,380,"small")
-teamInfoContact:SetHeight(40)
+local teamInfoContact=line(teamInfoPanel,22,-137,410,"small")
+teamInfoContact:SetHeight(58)
+teamInfoContact:SetWordWrap(true)
 teamInfoContact:SetJustifyV("TOP")
 local teamInfoEdit
 local function drawTeamInfo(team)
@@ -229,7 +233,7 @@ local function drawTeamInfo(team)
   teamInfoContact:SetText("|cffffd36aJOIN / CONTACT|r\\n"..((info.contact and info.contact~="") and info.contact or "No contact listed yet."))
   teamInfoEdit:SetShown(FT:CanEditInfo(team,FT:SelfName()) and true or false)
 end
-teamInfoEdit=button(teamInfoPanel,"Edit info",105,-185,90,function()
+teamInfoEdit=button(teamInfoPanel,"Edit info",115,-220,90,function()
   local team=FT.teams[FT.selected] or systemTeams[FT.selected]
   if not team or not FT:CanEditInfo(team,FT:SelfName()) then return end
   local info=FT.systemInfo and FT.systemInfo[team.id] or {}
@@ -245,7 +249,7 @@ teamInfoEdit=button(teamInfoPanel,"Edit info",105,-185,90,function()
     end)
   end)
 end)
-button(teamInfoPanel,"Close",225,-185,90,function() teamInfoPanel:Hide() end)
+button(teamInfoPanel,"Close",235,-220,90,function() teamInfoPanel:Hide() end)
 local function canSee(team) return isSystemTeam(team) or FT:CanSeeDetails(team, me()) end
 local function sortedTeams()
   local list = {}
