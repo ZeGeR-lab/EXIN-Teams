@@ -834,7 +834,7 @@ local function drawTeams()
   for who, entry in pairs(FT.roster) do
     local isInitiate=type(entry.rank)=="string" and entry.rank:lower()=="initiate"
     local hasTeamNote=entry.noteTeam and entry.discordName and
-      trim(entry.noteTeam)~="" and trim(entry.discordName)~=""
+      entry.noteTeam~="" and entry.discordName~=""
     if isInitiate then
       onboarding.members[who]="member"
     elseif isMemberOrHigher(entry) and not hasTeamNote and not assignedToTeam[who] then
