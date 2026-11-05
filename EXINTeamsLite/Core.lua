@@ -203,6 +203,20 @@ local outgoingLocked=false
 persistPending=function()
   if LT.db then LT.db.pendingMessages=outgoingQueue end
 end
+local function sanitizePendingMessages(messages)
+  if type(messages)~="table" then return {} end
+  for i=#messages,1,-1 do
+    local packet=messages[i]
+    if type(packet)~="table" or type(packet.message)~="string" or #packet.message>240 or
+      (packet.prefix and packet.prefix~=LT.PREFIX) or
+      (packet.channel~="GUILD" and packet.channel~="WHISPER") then
+      table.remove(messages,i)
+    else
+      packet.prefix=LT.PREFIX
+    end
+  end
+  return messages
+end
 local function lastReturn(...)
   if select("#",...)==0 then return nil end
   return select(-1,...)
@@ -221,7 +235,7 @@ local function scheduleOutgoing(delay)
         local packet=outgoingQueue[1]
         local result
         if C_ChatInfo and C_ChatInfo.SendAddonMessage then
-          result=lastReturn(C_ChatInfo.SendAddonMessage(LT.PREFIX,packet.message,packet.channel,packet.target))
+          result=lastReturn(C_ChatInfo.SendAddonMessage(packet.prefix or LT.PREFIX,packet.message,packet.channel,packet.target))
         elseif SendAddonMessage then
           result=lastReturn(SendAddonMessage(LT.PREFIX,packet.message,packet.channel,packet.target))
         else
@@ -251,7 +265,7 @@ local function emit(channel,target,op,...)
   if scope:find("|",1,true) or scope:find("\r",1,true) or scope:find("\n",1,true) then return end
   local msg=scope.."|"..table.concat(fields,"|")
   if #msg>240 then LT:Notice("A sync packet was too large and was not sent."); return end
-  local packet={message=msg,channel=channel,target=target}
+  local packet={prefix=LT.PREFIX,message=msg,channel=channel,target=target}
   if #outgoingQueue>0 or outgoingLocked then
     table.insert(outgoingQueue,packet)
     persistPending()
@@ -575,7 +589,7 @@ function LT:OpenGuild()
   end
   activeGuildKey=key
   self.db=EXINTeamsLiteDB[key]
-  if guildChanged then outgoingQueue=self.db.pendingMessages or {} end
+  if guildChanged then outgoingQueue=sanitizePendingMessages(self.db.pendingMessages) end
   persistPending()
   self.teams=self.db.teams or {}; self.authorizedOfficers=self.db.authorizedOfficers or {}
   sanitizeStoredRevisions(self.teams)
