@@ -354,7 +354,8 @@ button(scheduleEditor,"Save",145,-330,90,function()
   if #contact>70 or contact:find("[|\r\n]") then FT:Notice("Contact must be 70 characters or fewer."); return end
   FT:Act("INFO",teamID,schedule,contact)
   scheduleEditor:Hide()
-  teamInfoPanel:Hide()
+  drawTeamInfo(team)
+  teamInfoPanel:Show()
 end)
 button(scheduleEditor,"Cancel",255,-330,90,function() scheduleEditor:Hide() end)
 local function canSee(team) return isSystemTeam(team) or FT:CanSeeDetails(team, me()) end
