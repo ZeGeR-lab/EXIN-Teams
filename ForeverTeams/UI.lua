@@ -339,8 +339,8 @@ local function loadScheduleEditor(info)
       if item.value==value then UIDropDownMenu_SetSelectedValue(dropdown,item.value); UIDropDownMenu_SetText(dropdown,item.label); return end
     end
   end
-  select(hourDropdown,data and tostring(data.hour) or "7",hours)
-  select(minuteDropdown,data and string.format("%02d",data.minute) or "00",minutes)
+  select(hourDropdown,data and tostring(data.startHour) or "7",hours)
+  select(minuteDropdown,data and string.format("%02d",data.startMinute) or "00",minutes)
   select(ampmDropdown,data and data.startAMPM or "PM",ampm)
   select(endHourDropdown,data and tostring(data.endHour) or "10",hours)
   select(endMinuteDropdown,data and string.format("%02d",data.endMinute) or "00",minutes)
