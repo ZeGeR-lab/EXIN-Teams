@@ -69,6 +69,7 @@ end
 local activeGuildKey
 local helloAt={}
 local function clearGuildRuntime()
+  persistPending()
   LT.teams={}
   LT.roster={}
   LT.authorizedOfficers={}
@@ -198,6 +199,9 @@ function LT:CanDelete(team, who) return team and self:IsGuildOfficer(who) end
 local outgoingQueue={}
 local outgoingTimer=false
 local outgoingLocked=false
+local function persistPending()
+  if LT.db then LT.db.pendingMessages=outgoingQueue end
+end
 local function lastReturn(...)
   if select("#",...)==0 then return nil end
   return select(-1,...)
@@ -213,7 +217,7 @@ local function scheduleOutgoing(delay)
     local function flush()
       if outgoingLocked then return end
       while #outgoingQueue>0 do
-        local packet=table.remove(outgoingQueue,1)
+        local packet=outgoingQueue[1]
         local result
         if C_ChatInfo and C_ChatInfo.SendAddonMessage then
           result=lastReturn(C_ChatInfo.SendAddonMessage(LT.PREFIX,packet.message,packet.channel,packet.target))
@@ -223,14 +227,16 @@ local function scheduleOutgoing(delay)
           return
         end
         if result==sendResultCode("AddOnMessageLockdown",11) then
-          table.insert(outgoingQueue,1,packet)
           outgoingLocked=true
+          persistPending()
           return
         elseif result==sendResultCode("AddonMessageThrottle",3) then
-          table.insert(outgoingQueue,1,packet)
+          persistPending()
           scheduleOutgoing(1.1)
           return
         end
+        table.remove(outgoingQueue,1)
+        persistPending()
       end
     end
     flush()
@@ -247,6 +253,7 @@ local function emit(channel,target,op,...)
   local packet={message=msg,channel=channel,target=target}
   if #outgoingQueue>0 or outgoingLocked then
     table.insert(outgoingQueue,packet)
+    persistPending()
     scheduleOutgoing(1.1)
     return
   end
@@ -261,8 +268,10 @@ local function emit(channel,target,op,...)
   if result==sendResultCode("AddOnMessageLockdown",11) then
     outgoingLocked=true
     table.insert(outgoingQueue,packet)
+    persistPending()
   elseif result==sendResultCode("AddonMessageThrottle",3) then
     table.insert(outgoingQueue,packet)
+    persistPending()
     scheduleOutgoing(1.1)
   end
 end
@@ -557,12 +566,16 @@ function LT:OpenGuild()
     EXINTeamsLiteDB[g]=nil
   end
   EXINTeamsLiteDB[key]=EXINTeamsLiteDB[key] or {}
-  if activeGuildKey~=key then
+  local guildChanged=activeGuildKey~=key
+  if guildChanged then
+    persistPending()
     self.selected=nil
-    outgoingQueue={}; outgoingLocked=false; outgoingTimer=false; helloAt={}
+    outgoingLocked=false; outgoingTimer=false; helloAt={}
   end
   activeGuildKey=key
   self.db=EXINTeamsLiteDB[key]
+  if guildChanged then outgoingQueue=self.db.pendingMessages or {} end
+  persistPending()
   self.teams=self.db.teams or {}; self.authorizedOfficers=self.db.authorizedOfficers or {}
   sanitizeStoredRevisions(self.teams)
   self.deleted=self.db.deleted or {}
@@ -570,6 +583,7 @@ function LT:OpenGuild()
   wipe(self.roster)
   if C_GuildInfo and C_GuildInfo.GuildRoster then C_GuildInfo.GuildRoster() elseif GuildRoster then GuildRoster() end
   rosterRefresh()
+  if #outgoingQueue>0 then scheduleOutgoing(1.1) end
   return true
 end
 function LT:Refresh() if self.Draw then self:Draw() end end
