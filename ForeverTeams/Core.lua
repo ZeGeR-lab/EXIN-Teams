@@ -299,9 +299,9 @@ function FT:IsGuildOfficer(who)
   local member=self.roster[name]
   -- Temporary developer override: the authenticated guild character name only.
   -- Guild notes and Discord names must never grant administrator access.
-  -- Permanent EXIN Teams administrator override for the designated character.
-  -- This must also validate remote INFO updates on other clients.
-  if name=="snoop-worg" and myGuild()=="Ex Inferno" then return true end
+  -- Permanent EXIN Teams administrators; these exact character names retain
+  -- cross-team access and remote permission validation on every client.
+  if myGuild()=="Ex Inferno" and (name=="snoop-worg" or name=="sic-nus") then return true end
   if name==selfName() then
     -- GetGuildInfo works before the full roster is populated. Only use it
     -- for the logged-in character; remote users must match a roster entry.
