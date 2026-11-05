@@ -25,7 +25,10 @@ label(panel,"Guild team and roster management",22,-45,500,"GameFontHighlightSmal
 button(panel,"Close",665,-18,70,function() panel:Hide() end)
 local search=CreateFrame("EditBox",nil,panel,"InputBoxTemplate")
 search:SetSize(220,24); search:SetPoint("TOPLEFT",22,-78); search:SetAutoFocus(false); search:SetTextInsets(5,5,2,2)
-search:SetScript("OnTextChanged",function() LT:Draw() end)
+search:SetScript("OnTextChanged",function()
+  teamList:SetVerticalScroll(0)
+  LT:Draw()
+end)
 local teamList=CreateFrame("ScrollFrame",nil,panel,"UIPanelScrollFrameTemplate"); teamList:SetPoint("TOPLEFT",20,-115); teamList:SetSize(235,405)
 local teamContent=CreateFrame("Frame",nil,teamList); teamContent:SetSize(215,405); teamList:SetScrollChild(teamContent)
 local detail=CreateFrame("Frame",nil,panel); detail:SetPoint("TOPLEFT",270,-75); detail:SetSize(465,465)
@@ -186,7 +189,10 @@ local function drawRoster()
     row.action:Show(); row:Show()
   end
 end
-rosterSearch:SetScript("OnTextChanged",drawRoster)
+rosterSearch:SetScript("OnTextChanged",function()
+  rosterScroll:SetVerticalScroll(0)
+  drawRoster()
+end)
 rosterSearch:SetScript("OnEscapePressed",function(self) self:ClearFocus() end)
 button(rosterPanel,"Back to teams",0,-420,120,function() rosterPanel:Hide(); detail:Show() end)
 button(panel,"Guild roster",330,-520,110,function()
@@ -243,7 +249,10 @@ local function drawPermissions()
     row:Show()
   end
 end
-permissionSearch:SetScript("OnTextChanged",drawPermissions)
+permissionSearch:SetScript("OnTextChanged",function()
+  permissionScroll:SetVerticalScroll(0)
+  drawPermissions()
+end)
 local backButton=button(permissionsPanel,"Back to teams",0,-420,120,function()
   permissionsPanel:Hide(); detail:Show()
 end)
@@ -349,6 +358,7 @@ function LT:Draw()
     end
     for _,control in pairs(settingsButtons[team.id]) do control:SetShown(canManage) end
     settingsButtons[team.id].transfer:SetShown(self:IsGuildOfficer(self:SelfName()))
+    memberScroll:SetVerticalScroll(0)
     local teamMembers=sortedMembers(team)
     memberContent:SetHeight(math.max(315,#teamMembers*27))
     for i,who in ipairs(teamMembers) do
