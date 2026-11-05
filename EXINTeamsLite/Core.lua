@@ -201,7 +201,7 @@ local outgoingQueue={}
 local outgoingTimer=false
 local outgoingLocked=false
 persistPending=function()
-  if LT.db then LT.db.pendingMessages=outgoingQueue end
+  if LT.db then LT.db.pendingProtocol=LT.PREFIX; LT.db.pendingMessages=outgoingQueue end
 end
 local function sanitizePendingMessages(messages)
   if type(messages)~="table" then return {} end
@@ -589,7 +589,10 @@ function LT:OpenGuild()
   end
   activeGuildKey=key
   self.db=EXINTeamsLiteDB[key]
-  if guildChanged then outgoingQueue=sanitizePendingMessages(self.db.pendingMessages) end
+  if guildChanged then
+    local savedProtocol=self.db.pendingProtocol or "EXINL2"
+    outgoingQueue=savedProtocol==LT.PREFIX and sanitizePendingMessages(self.db.pendingMessages) or {}
+  end
   persistPending()
   self.teams=self.db.teams or {}; self.authorizedOfficers=self.db.authorizedOfficers or {}
   sanitizeStoredRevisions(self.teams)
