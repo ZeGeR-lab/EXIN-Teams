@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.10 — 2026-11-05
+
+- Restrict Team Leader management to the team identified by their guild-note assignment.
+- Grant Snoop Worg and Sic Nus permanent cross-team administrator access.
+- Keep guild officer permissions unchanged and enforce access in the shared action validator.
+
+
 ## 0.6.9 — 2026-11-05
 
 - Fix the shared action validator incorrectly rejecting ordinary names and text containing the letters `r` or `n`, including full character names such as Snoop Worg.
