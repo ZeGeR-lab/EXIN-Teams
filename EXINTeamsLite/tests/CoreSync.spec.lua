@@ -59,8 +59,8 @@ assert(LT.teams.team1.members["oldmember-aeriepeak"]=="officer","previous owner 
 -- the initial metadata, and subsequent SYNC metadata requires a positive revision.
 receive("SYNC|team1|Zero Revision Forgery|General||Red|E02|member-aeriepeak|150|0|zzz-aeriepeak|officer-aeriepeak","Member-AeriePeak")
 assert(LT.teams.team1.name=="Team Alpha","zero-revision SYNC must not overwrite established metadata")
-assert(LT.teams.team1.metaChangedAt==nil or LT.teams.team1.metaChangedAt==0,
-  "zero-revision SYNC must not create metadata revision history")
+assert(LT.teams.team1.metaChangedAt==1,
+  "zero-revision SYNC must not replace the existing metadata revision")
 -- A non-Officer team owner may sync team data but cannot forge a future ownership revision.
 LT.authorizedOfficers["member-aeriepeak"].revoked=true
 receive("SYNC|team1|Team Alpha|General||Blue|E01|member-aeriepeak|999999999|0|member-aeriepeak|zzz-aeriepeak","Member-AeriePeak")
