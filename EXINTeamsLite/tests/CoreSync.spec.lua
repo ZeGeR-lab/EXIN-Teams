@@ -53,6 +53,12 @@ receive("SYNC|team1|Team Alpha|General||Blue|E01|member-aeriepeak|150","Officer-
 assert(LT.teams.team1.owner=="member-aeriepeak","trusted newer ownership snapshot should reconcile")
 assert(LT.teams.team1.members["member-aeriepeak"]=="leader","new owner must receive Leader role")
 assert(LT.teams.team1.members["oldmember-aeriepeak"]=="officer","previous owner Leader role should be demoted")
+-- An unversioned SYNC snapshot cannot overwrite metadata; NEW already carries
+-- the initial metadata, and subsequent SYNC metadata requires a positive revision.
+receive("SYNC|team1|Zero Revision Forgery|General||Red|E02|member-aeriepeak|150|0|zzz-aeriepeak|officer-aeriepeak","Member-AeriePeak")
+assert(LT.teams.team1.name=="Team Alpha","zero-revision SYNC must not overwrite established metadata")
+assert(LT.teams.team1.metaChangedAt==nil or LT.teams.team1.metaChangedAt==0,
+  "zero-revision SYNC must not create metadata revision history")
 -- A non-Officer team owner may sync team data but cannot forge a future ownership revision.
 LT.authorizedOfficers["member-aeriepeak"].revoked=true
 receive("SYNC|team1|Team Alpha|General||Blue|E01|member-aeriepeak|999999999|0|member-aeriepeak|zzz-aeriepeak","Member-AeriePeak")
@@ -141,6 +147,13 @@ receive("NEW|team2|Unauthorized Team|General||Random-AeriePeak|Blue|E01","Random
 assert(LT.teams.team2==nil,"ordinary member must not create a team")
 receive("NEW|team2|Officer Team|General||Random-AeriePeak|Blue|E01","Officer-AeriePeak")
 assert(LT.teams.team2~=nil and LT.teams.team2.owner=="random-aeriepeak","designated Officer should be able to create a team for a guild member")
+-- If the winning (smaller-ID) creation arrives first, this client must tombstone
+-- a later losing duplicate ID instead of merely ignoring it.
+receive("NEW|zzz-collision|Officer Team|General||Random-AeriePeak|Blue|E01","Officer-AeriePeak")
+assert(LT.teams["zzz-collision"]==nil and LT.deleted["zzz-collision"]~=nil,
+  "a later losing duplicate creation must receive a tombstone")
+receive("NEW|zzz-collision|Officer Team|General||Random-AeriePeak|Blue|E01","Officer-AeriePeak")
+assert(LT.teams["zzz-collision"]==nil,"a stale losing duplicate NEW must not resurrect")
 
 -- Designated Officers may delete teams, even without an in-game Officer rank.
 receive("DEL|team1","Officer-AeriePeak")
