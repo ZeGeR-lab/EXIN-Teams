@@ -237,7 +237,7 @@ local function scheduleOutgoing(delay)
         if C_ChatInfo and C_ChatInfo.SendAddonMessage then
           result=lastReturn(C_ChatInfo.SendAddonMessage(packet.prefix or LT.PREFIX,packet.message,packet.channel,packet.target))
         elseif SendAddonMessage then
-          result=lastReturn(SendAddonMessage(LT.PREFIX,packet.message,packet.channel,packet.target))
+          result=lastReturn(SendAddonMessage(packet.prefix or LT.PREFIX,packet.message,packet.channel,packet.target))
         else
           return
         end
