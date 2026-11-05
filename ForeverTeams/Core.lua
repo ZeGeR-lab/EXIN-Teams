@@ -21,8 +21,8 @@ FT.colors = {
   {name="Pink", hex="ff83b7"}, {name="Purple", hex="aa89ff"},
   {name="Blue", hex="69b6ff"}, {name="Green", hex="78d996"},
   {name="Yellow", hex="f7d96b"}, {name="Orange", hex="ffab69"},
-  {name="Red", hex="ff7777"}, {name="White", hex="eeeeee"},
-  {name="Black", hex="838b92"},
+  {name="Red", hex="ff7777"}, {name="Crimson", hex="dc143c"},
+  {name="White", hex="eeeeee"}, {name="Black", hex="838b92"},
 }
 function FT:Color(name)
   for _, color in ipairs(self.colors) do if color.name == name then return color end end
@@ -63,11 +63,18 @@ local function rosterRefresh()
   for i = 1, total do
     local name, rank, rankID, level, class, _, note, _, online, _, _, _, _, _, _, _, guid = GetGuildRosterInfo(i)
     if name then
-      local label, discord = (note or ""):match("^%s*([%a]+)%s+%-%s+(.+)%s*$")
+      -- Accept a single- or multi-word color label, optionally prefixed by
+      -- "Team " (for example, "Crimson - Name" or "Team Crimson - Name").
+      local label, discord = (note or ""):match("^%s*([%a][%a%s]*[%a])%s+%-%s+(.+)%s*$")
+      if not label then
+        label, discord = (note or ""):match("^%s*([%a]+)%s+%-%s+(.+)%s*$")
+      end
+      label=label and trim(label):gsub("%s+"," ")
+      local normalizedLabel=label and label:lower():gsub("^team%s+","")
       local canonicalColor
-      if label then
+      if normalizedLabel then
         for _, color in ipairs(FT.colors) do
-          if color.name:lower() == label:lower() then canonicalColor = color.name; break end
+          if color.name:lower() == normalizedLabel then canonicalColor = color.name; break end
         end
       end
       if not canonicalColor or not discord or trim(discord) == "" then
