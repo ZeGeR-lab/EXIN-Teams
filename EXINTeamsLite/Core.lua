@@ -211,7 +211,7 @@ local function scheduleOutgoing(delay)
         local packet=table.remove(outgoingQueue,1)
         local result
         if C_ChatInfo and C_ChatInfo.SendAddonMessage then
-          result=C_ChatInfo.SendAddonMessage(LT.PREFIX,packet.message,packet.channel,packet.target)
+          result=select(-1,C_ChatInfo.SendAddonMessage(LT.PREFIX,packet.message,packet.channel,packet.target))
         elseif SendAddonMessage then
           SendAddonMessage(LT.PREFIX,packet.message,packet.channel,packet.target)
         else
@@ -247,9 +247,9 @@ local function emit(channel,target,op,...)
   end
   local result
   if C_ChatInfo and C_ChatInfo.SendAddonMessage then
-    result=C_ChatInfo.SendAddonMessage(LT.PREFIX,msg,channel,target)
+    result=select(-1,C_ChatInfo.SendAddonMessage(LT.PREFIX,msg,channel,target))
   elseif SendAddonMessage then
-    SendAddonMessage(LT.PREFIX,msg,channel,target)
+    result=select(-1,SendAddonMessage(LT.PREFIX,msg,channel,target))
   else
     return
   end
