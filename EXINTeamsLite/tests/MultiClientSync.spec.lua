@@ -62,9 +62,13 @@ local function newClient(name)
       if client.nextSendResult~=nil then
         local result=client.nextSendResult
         client.nextSendResult=nil
-        if result~=0 then return result end
+        if result~=0 then
+          if client.legacyReturn then return true,result end
+          return result
+        end
       end
       deliver(client,prefix,message,channel,target)
+      if client.legacyReturn then return true,0 end
       return 0
     end
   }
@@ -234,6 +238,7 @@ local function runTimers(client)
 end
 snoop.LT:Act("NEW","retry-team","Retry Team","Raid","","Member-AeriePeak","Blue","E01")
 flush()
+member.legacyReturn=true
 member.nextSendResult=3
 member.LT:Act("FOCUS","retry-team","Throttle Retry")
 assert(member.LT.teams["retry-team"].focus=="Throttle Retry","local changes should apply before a throttled send is retried")
@@ -241,6 +246,7 @@ member.nextSendResult=0
 runTimers(member)
 flush()
 assert(snoop.LT.teams["retry-team"].focus=="Throttle Retry","throttled addon packets should be retried and delivered")
+member.legacyReturn=false
 
 member.nextSendResult=11
 member.LT:Act("FOCUS","retry-team","Encounter Retry")
