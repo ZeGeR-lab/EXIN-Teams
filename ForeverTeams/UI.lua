@@ -628,20 +628,32 @@ control("Role",638,-135,48,function()
   end)
 end)
 control("Edit focus",210,-442,90,function()
-  local team=chosen(); if team and FT:CanManage(team,me()) then
-    ask("Team focus",team.focus,function(s) FT:Act("FOCUS",team.id,s) end)
-  end
+  local team=chosen(); if not team or not FT:CanEditInfo(team,me()) then return end
+  ask("Team focus",team.focus,function(s)
+    if team.system then
+      local info=FT.systemInfo and FT.systemInfo[team.id] or {}
+      FT:Act("SYS_EDIT",team.id,info.motd or team.motd,s,info.color or team.color)
+    else FT:Act("FOCUS",team.id,s) end
+  end)
 end)
 control("Edit message",305,-442,105,function()
-  local team=chosen(); if team and FT:CanManage(team,me()) then
-    ask("Team message of the day",team.motd,function(s) FT:Act("MOTD",team.id,s) end)
-  end
+  local team=chosen(); if not team or not FT:CanEditInfo(team,me()) then return end
+  ask("Team message of the day",team.motd,function(s)
+    if team.system then
+      local info=FT.systemInfo and FT.systemInfo[team.id] or {}
+      FT:Act("SYS_EDIT",team.id,s,info.focus or team.focus,info.color or team.color)
+    else FT:Act("MOTD",team.id,s) end
+  end)
 end)
 control("Team color",510,-442,100,function()
-  local team=chosen(); if not team or not FT:CanManage(team,me()) then return end
+  local team=chosen(); if not team or not FT:CanEditInfo(team,me()) then return end
   local index=1
   for i,color in ipairs(FT.colors) do if color.name == team.color then index=i; break end end
-  FT:Act("COLOR",team.id,FT.colors[index % #FT.colors + 1].name)
+  local nextColor=FT.colors[index % #FT.colors + 1].name
+  if team.system then
+    local info=FT.systemInfo and FT.systemInfo[team.id] or {}
+    FT:Act("SYS_EDIT",team.id,info.motd or team.motd,info.focus or team.focus,nextColor)
+  else FT:Act("COLOR",team.id,nextColor) end
 end)
 local transferButton=control("Transfer",615,-442,78,function()
   local team=chosen()
@@ -864,10 +876,12 @@ local function drawQuests()
 end
 
 local function drawTeams()
-  local freeAgents = {id="system-free-agents",name="Free Agents",color="White",
-    focus="Guild roster",motd="Members without a valid Color - Name guild note.",owner="",members={},system=true}
-  local onboarding = {id="system-needs-onboarding",name="Needs Onboarding",color="Orange",
-    focus="Guild roster",motd="Guild members currently holding the Initiate rank.",owner="",members={},system=true}
+  local freeInfo=FT.systemInfo and FT.systemInfo["system-free-agents"] or {}
+  local onboardingInfo=FT.systemInfo and FT.systemInfo["system-needs-onboarding"] or {}
+  local freeAgents = {id="system-free-agents",name="Free Agents",color=freeInfo.color or "White",
+    focus=freeInfo.focus or "Guild roster",motd=freeInfo.motd or "Members without a valid Color - Name guild note.",owner="",members={},system=true}
+  local onboarding = {id="system-needs-onboarding",name="Needs Onboarding",color=onboardingInfo.color or "Orange",
+    focus=onboardingInfo.focus or "Guild roster",motd=onboardingInfo.motd or "Guild members currently holding the Initiate rank.",owner="",members={},system=true}
   -- A character is not a Free Agent if they already belong to any real team.
   -- Check persisted team membership as well as the parsed guild note so stale or
   -- manually assigned roster entries cannot be mislabeled as unassigned.
