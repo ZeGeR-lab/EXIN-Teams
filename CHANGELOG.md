@@ -2,6 +2,7 @@
 
 ## 0.6.1 — 2026-11-05
 
+- Keep the Needs Onboarding category exclusive to Initiate-ranked guild members; list unassigned Member-rank and higher characters as Free Agents.
 - Make team rosters vertically scrollable so larger teams can be browsed without truncating the member list.
 - Show only guild members at the Member rank or higher in actual team rosters; retain the special onboarding categories for lower-ranked guild members.
 - Temporarily remove the calendar interface and stop loading Calendar.lua; retain existing SavedVariables for compatibility.
