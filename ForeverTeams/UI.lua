@@ -246,8 +246,14 @@ local function hover(x,y,width,detail)
     if not self.who then return end
     GameTooltip:SetOwner(self,"ANCHOR_RIGHT")
     GameTooltip:AddLine(self.who,0.65,0.88,0.35)
-    GameTooltip:AddLine("Professions: "..professionText(self.who),1,1,1,true)
-    detail(self)
+    local currentTeam=chosen()
+    if isSystemTeam(currentTeam) then
+      local entry=FT.roster[self.who]
+      GameTooltip:AddLine("Guild rank: "..tostring(entry and entry.rank or "Unknown"),0.8,0.85,1,true)
+    else
+      GameTooltip:AddLine("Professions: "..professionText(self.who),1,1,1,true)
+      detail(self)
+    end
     GameTooltip:Show()
   end)
   f:SetScript("OnLeave",function() GameTooltip:Hide() end)
@@ -895,8 +901,8 @@ local function drawTeams()
   local isMember=team and team.members[me()]
   local pending=team and FT.requests[team.id] and FT.requests[team.id][me()]
   applyButton:SetText(pending and "Pending" or "Apply")
-  applyButton:SetEnabled(team and not isMember and not pending and true or false)
-  joinButton:SetEnabled(team and not isMember and FT.invitations[team.id] and FT.invitations[team.id][me()] and true or false)
+  applyButton:SetEnabled(team and not isSystemTeam(team) and not isMember and not pending and true or false)
+  joinButton:SetEnabled(team and not isSystemTeam(team) and not isMember and FT.invitations[team.id] and FT.invitations[team.id][me()] and true or false)
   local own=FT.profiles[me()]
   mainRoleButton:SetText("Main: "..(own and own.main or "choose"))
   offRoleButton:SetText("Off: "..(own and own.off or "None"))
