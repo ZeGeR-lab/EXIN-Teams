@@ -342,7 +342,7 @@ notesNeeded:SetScript("OnEnter",function(self)
   GameTooltip:SetOwner(self,"ANCHOR_RIGHT")
   GameTooltip:AddLine("Guild notes needed",1,0.82,0.35)
   for _, name in ipairs(self.missing or {}) do GameTooltip:AddLine(name,1,0.82,0.35) end
-  GameTooltip:AddLine("Use Team - DiscordName in the guild member note.",1,1,1,true)
+  GameTooltip:AddLine("Use Color - Name (for example, Blue - DiscordName) in the guild member note.",1,1,1,true)
   GameTooltip:Show()
 end)
 notesNeeded:SetScript("OnLeave",function() GameTooltip:Hide() end)
@@ -360,7 +360,7 @@ for i=1,9 do
     end
     local entry=FT.roster[self.who]
     if not entry or not entry.noteTeam or not entry.discordName then
-      GameTooltip:AddLine("Guild note needed: Team - DiscordName",1,0.82,0.35,true)
+      GameTooltip:AddLine("Guild note needed: Color - Name",1,0.82,0.35,true)
     end
     if entry and entry.discordName then GameTooltip:AddLine("Discord: "..entry.discordName,0.8,0.85,1,true) end
     if entry and entry.note ~= "" then GameTooltip:AddLine("Guild note: "..entry.note,0.8,0.85,1,true) end
@@ -791,8 +791,11 @@ local function drawTeams()
   end
   systemTeams = {[freeAgents.id]=freeAgents,[onboarding.id]=onboarding}
   local mine, others={},{}
+  local myEntry=FT.roster[me()]
+  local hasValidNote=myEntry and myEntry.noteTeam and myEntry.discordName
   for _, team in ipairs(sortedTeams()) do
-    if not isSystemTeam(team) and (team.members[me()] or team.owner == me()) then table.insert(mine,team)
+    if not isSystemTeam(team) and (team.owner == me() or (team.members[me()] and hasValidNote)) then
+      table.insert(mine,team)
     else table.insert(others,team) end
   end
   local list={}
