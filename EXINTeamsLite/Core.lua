@@ -66,6 +66,7 @@ local function guildStorageKey(name)
   return tostring(name).."@"..realm
 end
 local activeGuildKey
+local helloAt={}
 local function clearGuildRuntime()
   LT.teams={}
   LT.roster={}
@@ -553,7 +554,7 @@ function LT:OpenGuild()
   EXINTeamsLiteDB[key]=EXINTeamsLiteDB[key] or {}
   if activeGuildKey~=key then
     self.selected=nil
-    outgoingQueue={}; outgoingLocked=false; outgoingTimer=false
+    outgoingQueue={}; outgoingLocked=false; outgoingTimer=false; helloAt={}
   end
   activeGuildKey=key
   self.db=EXINTeamsLiteDB[key]
@@ -602,7 +603,14 @@ frame:SetScript("OnEvent",function(_,event,...)
     if not guild() or f[1]~=guildStorageKey(guild()) then return end
     table.remove(f,1)
     if not f[1] then return end
-    if f[1]=="HELLO" then emit("WHISPER",actor,"PONG"); syncTeams(); return end
+    if f[1]=="HELLO" then
+      -- A guild member can request a full roster snapshot, but repeated HELLO
+      -- packets must not flood every Officer's outgoing synchronization queue.
+      local now=time()
+      if helloAt[actor] and now-helloAt[actor]<15 then return end
+      helloAt[actor]=now
+      emit("WHISPER",actor,"PONG"); syncTeams(); return
+    end
     if f[1]=="PONG" then return end
     if channel=="WHISPER" and f[1]~="HELLO" then return end
     apply(f[1],f,actor)
