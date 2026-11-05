@@ -264,8 +264,7 @@ local function rosterRefresh()
       end
       for who, entry in pairs(FT.roster) do
         local label=entry.noteTeam
-        if label and match[noteKey(label)]==team and
-          (who ~= team.owner or team.ownerParticipates) and not team.members[who] then
+        if label and match[noteKey(label)]==team and not team.members[who] then
           team.members[who]="member"
           team.noteMembers[who]=true
           FT:RecordActivity(team,display(who).." joined from their guild note")
