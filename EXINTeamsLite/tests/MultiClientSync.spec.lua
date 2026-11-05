@@ -278,6 +278,8 @@ member.LT:Act("FOCUS","retry-team","Reload Persisted")
 local savedGuild=member.saved["Ex Inferno@AeriePeak"]
 assert(savedGuild and savedGuild.pendingMessages and #savedGuild.pendingMessages>0,
   "lockdown-rejected packets should be saved for the current guild")
+assert(savedGuild.pendingMessages[1].prefix==member.LT.PREFIX,
+  "persisted messages should retain the protocol prefix they were created with")
 member.online=false
 local restarted=newClient("Member-AeriePeak",member.saved)
 table.insert(clients,restarted)
