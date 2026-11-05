@@ -24,6 +24,7 @@ Lightweight guild team and roster management for Ex Inferno.
 - Edit or clear the team message; clearing it synchronizes to other clients.
 - Warn team managers that renaming a team does not automatically rewrite guild public notes.
 - Synchronize team metadata, membership, permissions, and deletions between online guild clients.
+- Queue addon messages rejected by modern client encounter lockdown or per-prefix throttling, then retry after communication is available.
 - Scope every addon message to the active guild and realm; all guild clients must update together when the synchronization protocol changes.
 - Resolve simultaneous same-name team creation deterministically using the lexicographically smallest team ID, with a tombstone for the losing ID.
 - Resolve equal-timestamp ownership transfers deterministically by normalized actor identity; ownership revision and actor are replicated together.
