@@ -306,4 +306,21 @@ assert(#protocolRestart.saved["Ex Inferno@AeriePeak"].pendingMessages==0,
 assert(snoop.LT.teams["retry-team"].focus=="Reload Persisted",
   "obsolete queued packets must not be transmitted under the current protocol prefix")
 
+-- Leaving a guild must not discard its queued messages while the character is guildless.
+protocolRestart.nextSendResult=11
+protocolRestart.LT:Act("FOCUS","retry-team","Guildless Pending")
+local getGuildInfo=protocolRestart.env.GetGuildInfo
+protocolRestart.env.GetGuildInfo=function() return nil end
+assert(not protocolRestart.LT:OpenGuild(),"opening Lite without a guild should detach the active guild")
+protocolRestart.eventHandler(nil,"PLAYER_ENTERING_WORLD")
+runTimers(protocolRestart)
+assert(#savedGuild.pendingMessages>0,"pending messages must remain saved while the character has no guild")
+protocolRestart.env.GetGuildInfo=getGuildInfo
+assert(protocolRestart.LT:OpenGuild(),"rejoining the guild should restore its saved data")
+protocolRestart.nextSendResult=0
+runTimers(protocolRestart)
+flush()
+assert(snoop.LT.teams["retry-team"].focus=="Guildless Pending",
+  "the saved message should be transmitted after rejoining its original guild")
+
 print("MultiClientSync.spec.lua: all two-client synchronization tests passed")
