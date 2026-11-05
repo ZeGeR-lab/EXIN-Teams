@@ -229,8 +229,8 @@ local function drawTeamInfo(team)
   if not team then teamInfoPanel:Hide(); return end
   local info=FT.systemInfo and FT.systemInfo[team.id] or {}
   teamInfoTitle:SetText("|cff9bdd00"..team.name.."  •  TEAM INFO|r")
-  teamInfoSchedule:SetText("|cffffd36aRAID DAYS / TIMES|r\\n"..((info.schedule and info.schedule~="") and info.schedule or "Not posted yet."))
-  teamInfoContact:SetText("|cffffd36aJOIN / CONTACT|r\\n"..((info.contact and info.contact~="") and info.contact or "No contact listed yet."))
+  teamInfoSchedule:SetText("|cffffd36aRAID DAYS / TIMES|r\n"..((info.schedule and info.schedule~="") and info.schedule or "Not posted yet."))
+  teamInfoContact:SetText("|cffffd36aJOIN / CONTACT|r\n"..((info.contact and info.contact~="") and info.contact or "No contact listed yet."))
   teamInfoEdit:SetShown(FT:CanEditInfo(team,FT:SelfName()) and true or false)
 end
 teamInfoEdit=button(teamInfoPanel,"Edit info",115,-220,90,function()
@@ -239,11 +239,11 @@ teamInfoEdit=button(teamInfoPanel,"Edit info",115,-220,90,function()
   local info=FT.systemInfo and FT.systemInfo[team.id] or {}
   ask("Raid days and times (include server time; max 70 characters)",info.schedule or "",function(schedule)
     schedule=schedule:match("^%s*(.-)%s*$")
-    if #schedule>70 or schedule:find("[|\\r\\n]") then FT:Notice("Schedule must be 70 characters or fewer."); return end
+    if #schedule>70 or schedule:find("[|\\r\n]") then FT:Notice("Schedule must be 70 characters or fewer."); return end
     C_Timer.After(0,function()
       ask("Who should applicants contact? (name / Discord; max 70 characters)",info.contact or "",function(contact)
         contact=contact:match("^%s*(.-)%s*$")
-        if #contact>70 or contact:find("[|\\r\\n]") then FT:Notice("Contact must be 70 characters or fewer."); return end
+        if #contact>70 or contact:find("[|\\r\n]") then FT:Notice("Contact must be 70 characters or fewer."); return end
         FT:Act("INFO",team.id,schedule,contact)
       end)
     end)
