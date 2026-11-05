@@ -280,7 +280,10 @@ function LT:Draw()
     team=visible[1]
     self.selected=team and team.id or nil
   end
-  if previousSelected~=self.selected then emblemPicker:Hide() end
+  if previousSelected~=self.selected then
+    emblemPicker:Hide()
+    memberScroll:SetVerticalScroll(0)
+  end
   teamContent:SetHeight(math.max(405,#visible*28))
   for i,t in ipairs(visible) do
     if not teamButtons[i] then teamButtons[i]=button(teamContent,"",0,-(i-1)*28,210,function(b) LT.selected=b.teamID; LT:Draw() end) end
@@ -358,7 +361,6 @@ function LT:Draw()
     end
     for _,control in pairs(settingsButtons[team.id]) do control:SetShown(canManage) end
     settingsButtons[team.id].transfer:SetShown(self:IsGuildOfficer(self:SelfName()))
-    memberScroll:SetVerticalScroll(0)
     local teamMembers=sortedMembers(team)
     memberContent:SetHeight(math.max(315,#teamMembers*27))
     for i,who in ipairs(teamMembers) do
