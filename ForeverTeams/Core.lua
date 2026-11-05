@@ -56,6 +56,18 @@ local function display(who)
   local entry=FT.roster[norm(who)]
   return (entry and entry.name or who):gsub("%-", " ")
 end
+local function parseTeamNote(note)
+  if type(note) ~= "string" or note == "" then return nil, nil end
+  local label, discord = note:match("^%s*(.-)%s+%-%s+(.+)%s*$")
+  label=label and trim(label):gsub("%s+"," ")
+  discord=discord and trim(discord)
+  local normalizedLabel=label and label:lower():gsub("^team%s+","")
+  if not normalizedLabel or not discord or discord=="" then return nil,nil end
+  for _, color in ipairs(FT.colors) do
+    if color.name:lower()==normalizedLabel then return color.name,discord end
+  end
+  return nil,nil
+end
 local function rosterRefresh()
   local total = GetNumGuildMembers and GetNumGuildMembers() or 0
   -- A roster request may finish later; an empty interim result must not erase
@@ -63,27 +75,20 @@ local function rosterRefresh()
   if total == 0 then FT:Refresh(); return end
   wipe(FT.roster)
   for i = 1, total do
-    local name, rank, rankID, level, class, _, note, _, online, _, _, _, _, _, _, _, guid = GetGuildRosterInfo(i)
+    local name, rank, rankID, level, class, _, publicNote, officerNote, online, _, _, _, _, _, _, _, guid = GetGuildRosterInfo(i)
     if name then
-      -- Accept a single- or multi-word color label, optionally prefixed by
-      -- "Team " (for example, "Crimson - Name" or "Team Crimson - Name").
-      local label, discord = (note or ""):match("^%s*([%a][%a%s]*[%a])%s+%-%s+(.+)%s*$")
-      if not label then
-        label, discord = (note or ""):match("^%s*([%a]+)%s+%-%s+(.+)%s*$")
-      end
-      label=label and trim(label):gsub("%s+"," ")
-      local normalizedLabel=label and label:lower():gsub("^team%s+","")
-      local canonicalColor
-      if normalizedLabel then
-        for _, color in ipairs(FT.colors) do
-          if color.name:lower() == normalizedLabel then canonicalColor = color.name; break end
-        end
-      end
-      if not canonicalColor or not discord or trim(discord) == "" then
-        canonicalColor, discord = nil, nil
+      -- Team assignments may be stored in either guild-note field. Prefer the
+      -- public note when it contains a valid assignment; otherwise check the
+      -- officer note (the common setup for guild-managed team rosters).
+      local canonicalColor, discord = parseTeamNote(publicNote)
+      local noteSource = publicNote or ""
+      if not canonicalColor then
+        canonicalColor, discord = parseTeamNote(officerNote)
+        if canonicalColor then noteSource = officerNote or "" end
       end
       FT.roster[norm(name)] = { name = name, rank = rank, rankID = rankID, level = level, class = class,
-        online = online, guid = guid, note = note or "", noteTeam = canonicalColor, discordName = discord and trim(discord) }
+        online = online, guid = guid, note = noteSource, publicNote = publicNote or "", officerNote = officerNote or "",
+        noteTeam = canonicalColor, discordName = discord }
     end
   end
   if FT.db then
