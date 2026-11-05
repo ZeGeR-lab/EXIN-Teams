@@ -819,10 +819,10 @@ local function drawTeams()
   local onboarding = {id="system-needs-onboarding",name="Needs Onboarding",color="Orange",
     focus="Guild roster",motd="Guild members currently holding the Initiate rank.",owner="",members={},system=true}
   for who, entry in pairs(FT.roster) do
-    if type(entry.rank)=="string" and entry.rank:lower()=="initiate" then
+    local isInitiate=type(entry.rank)=="string" and entry.rank:lower()=="initiate"
+    if isInitiate then
       onboarding.members[who]="member"
-    end
-    if not entry.noteTeam or not entry.discordName then
+    elseif isMemberOrHigher(entry) and (not entry.noteTeam or not entry.discordName) then
       freeAgents.members[who]="member"
     end
   end
