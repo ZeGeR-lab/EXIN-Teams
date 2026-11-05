@@ -198,6 +198,10 @@ function LT:CanDelete(team, who) return team and self:IsGuildOfficer(who) end
 local outgoingQueue={}
 local outgoingTimer=false
 local outgoingLocked=false
+local function lastReturn(...)
+  if select("#",...)==0 then return nil end
+  return select(-1,...)
+end
 local function sendResultCode(name,fallback)
   return Enum and Enum.SendAddonMessageResult and Enum.SendAddonMessageResult[name] or fallback
 end
@@ -212,9 +216,9 @@ local function scheduleOutgoing(delay)
         local packet=table.remove(outgoingQueue,1)
         local result
         if C_ChatInfo and C_ChatInfo.SendAddonMessage then
-          result=select(-1,C_ChatInfo.SendAddonMessage(LT.PREFIX,packet.message,packet.channel,packet.target))
+          result=lastReturn(C_ChatInfo.SendAddonMessage(LT.PREFIX,packet.message,packet.channel,packet.target))
         elseif SendAddonMessage then
-          result=select(-1,SendAddonMessage(LT.PREFIX,packet.message,packet.channel,packet.target))
+          result=lastReturn(SendAddonMessage(LT.PREFIX,packet.message,packet.channel,packet.target))
         else
           return
         end
