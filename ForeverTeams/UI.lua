@@ -818,11 +818,26 @@ local function drawTeams()
     focus="Guild roster",motd="Members without a valid Color - Name guild note.",owner="",members={},system=true}
   local onboarding = {id="system-needs-onboarding",name="Needs Onboarding",color="Orange",
     focus="Guild roster",motd="Guild members currently holding the Initiate rank.",owner="",members={},system=true}
+  -- A character is not a Free Agent if they already belong to any real team.
+  -- Check persisted team membership as well as the parsed guild note so stale or
+  -- manually assigned roster entries cannot be mislabeled as unassigned.
+  local assignedToTeam={}
+  for _, realTeam in pairs(FT.teams) do
+    if type(realTeam.members)=="table" then
+      for who, status in pairs(realTeam.members) do
+        if status and status~="left" and status~="removed" then
+          assignedToTeam[who]=true
+        end
+      end
+    end
+  end
   for who, entry in pairs(FT.roster) do
     local isInitiate=type(entry.rank)=="string" and entry.rank:lower()=="initiate"
+    local hasTeamNote=entry.noteTeam and entry.discordName and
+      trim(entry.noteTeam)~="" and trim(entry.discordName)~=""
     if isInitiate then
       onboarding.members[who]="member"
-    elseif isMemberOrHigher(entry) and (not entry.noteTeam or not entry.discordName) then
+    elseif isMemberOrHigher(entry) and not hasTeamNote and not assignedToTeam[who] then
       freeAgents.members[who]="member"
     end
   end
