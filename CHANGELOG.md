@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.7 — 2026-11-05
+
+- Increase team leadership transfer character-name input allowance to 48 characters so full first-and-last character names fit.
+
+
 ## 0.6.6 — 2026-11-05
 
 - Add separate end-hour, end-minute, and end-AM/PM selectors to each team's raid schedule editor.
