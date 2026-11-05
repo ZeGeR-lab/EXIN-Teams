@@ -214,12 +214,35 @@ local function sortedTeams()
   table.sort(list, function(a,b) return (a.name or "") < (b.name or "") end)
   return list
 end
+local function memberRankThreshold()
+  if GuildControlGetNumRanks and GuildControlGetRankName then
+    local count=GuildControlGetNumRanks() or 0
+    for index=1,count do
+      local rankName=GuildControlGetRankName(index)
+      if type(rankName)=="string" and rankName:lower()=="member" then return index-1 end
+    end
+  end
+  for _,entry in pairs(FT.roster) do
+    if type(entry.rank)=="string" and entry.rank:lower()=="member" then
+      return tonumber(entry.rankID)
+    end
+  end
+  return nil
+end
+local function isMemberOrHigher(entry)
+  if not entry then return false end
+  local threshold=memberRankThreshold()
+  local rankID=tonumber(entry.rankID)
+  if threshold~=nil and rankID~=nil then return rankID<=threshold end
+  return type(entry.rank)=="string" and entry.rank:lower()=="member"
+end
 local function sortedMembers(team)
   local list = {}
   for who in pairs(team.members) do
     local entry = FT.roster[who]
-    if isSystemTeam(team) or (entry and entry.noteTeam and
-      entry.noteTeam:lower() == tostring(team.color or ""):lower() and entry.discordName) then
+    local assigned = entry and entry.noteTeam and
+      entry.noteTeam:lower() == tostring(team.color or ""):lower() and entry.discordName
+    if isSystemTeam(team) or (assigned and isMemberOrHigher(entry)) then
       table.insert(list, who)
     end
   end
@@ -237,8 +260,9 @@ local function professionText(who)
   end
   return #result > 0 and table.concat(result, ", ") or "None recorded"
 end
-local function hover(x,y,width,detail)
-  local f=CreateFrame("Frame",nil,teamPage)
+local function hover(x,y,width,detail,parent)
+  parent=parent or teamPage
+  local f=CreateFrame("Frame",nil,parent)
   f:SetPoint("TOPLEFT",x,y)
   f:SetSize(width,19)
   f:EnableMouse(true)
@@ -337,6 +361,18 @@ local deleteButton=button(teamPage,"Delete team",20,-540,170,function()
   end
 end)
 local rosterTitle = line(teamPage, 210, -175, 480)
+local rosterScroll = CreateFrame("ScrollFrame",nil,teamPage,"UIPanelScrollFrameTemplate")
+rosterScroll:SetPoint("TOPLEFT",210,-191)
+rosterScroll:SetSize(480,160)
+rosterScroll:EnableMouseWheel(true)
+local rosterContent = CreateFrame("Frame",nil,rosterScroll)
+rosterContent:SetSize(460,160)
+rosterScroll:SetScrollChild(rosterContent)
+rosterScroll:SetScript("OnMouseWheel",function(self,delta)
+  local maxScroll=math.max(0,rosterContent:GetHeight()-self:GetHeight())
+  self:SetVerticalScroll(math.max(0,math.min(maxScroll,self:GetVerticalScroll()-delta*57)))
+end)
+local rosterScrollTeam=nil
 local notesNeeded = button(teamPage,"Notes needed",570,-163,115,function() end)
 notesNeeded:SetScript("OnEnter",function(self)
   GameTooltip:SetOwner(self,"ANCHOR_RIGHT")
@@ -348,9 +384,9 @@ end)
 notesNeeded:SetScript("OnLeave",function() GameTooltip:Hide() end)
 
 rosterTitle:SetText("|cff9bdd00ROSTER|r")
-for i=1,9 do
-  rosterRows[i] = line(teamPage, 215, -195-(i-1)*19, 460, "small")
-  rosterHover[i] = hover(213,-192-(i-1)*19,460,function(self)
+local function createRosterRow(i)
+  rosterRows[i]=line(rosterContent,5,-(i-1)*19,450,"small")
+  rosterHover[i]=hover(5,-(i-1)*19,450,function(self)
     local profile=FT.profiles[self.who]
     if profile then GameTooltip:AddLine("Dungeon roles: "..profile.main.." / "..profile.off,0.8,0.85,1) end
     local info=FT.playerInfo[self.who]
@@ -364,7 +400,7 @@ for i=1,9 do
     end
     if entry and entry.discordName then GameTooltip:AddLine("Discord: "..entry.discordName,0.8,0.85,1,true) end
     if entry and entry.note ~= "" then GameTooltip:AddLine("Guild note: "..entry.note,0.8,0.85,1,true) end
-  end)
+  end,rosterContent)
 end
 local requestTitle = line(teamPage, 210, -365, 480)
 requestTitle:SetText("|cff9bdd00APPLICATIONS|r")
@@ -872,20 +908,31 @@ local function drawTeams()
   deleteButton:SetShown(team and not isSystemTeam(team) and FT:CanDelete(team,me()) and true or false)
   transferButton:SetShown(team and not isSystemTeam(team) and FT:IsGuildOfficer(me()) and true or false)
   rosterTitle:SetText("|cff9bdd00ROSTER|r  |cff8b9b8b"..#members.." members|r")
+  if rosterScrollTeam~=(team and team.id) then
+    rosterScroll:SetVerticalScroll(0)
+    rosterScrollTeam=team and team.id
+  end
+  for i=1,#members do
+    if not rosterRows[i] then createRosterRow(i) end
+  end
+  local allowed=canSee(team)
+  rosterContent:SetHeight(math.max(160,#members*19))
+  local maxRosterScroll=math.max(0,rosterContent:GetHeight()-rosterScroll:GetHeight())
+  rosterScroll:SetVerticalScroll(math.min(rosterScroll:GetVerticalScroll(),maxRosterScroll))
   for i,t in ipairs(rosterRows) do
     local who=members[i]
     rosterHover[i].who=who
-    rosterHover[i]:SetShown(who ~= nil and canSee(team) and true or false)
+    rosterHover[i]:SetShown(who ~= nil and allowed and true or false)
+    t:SetShown(who ~= nil and allowed and true or false)
     if who then
       local data=FT.roster[who]
-      local allowed=canSee(team)
       local needsNote=allowed and (not data or not data.noteTeam or not data.discordName)
       local profile=allowed and FT.profiles[who]
       local dungeonRole=not allowed and "" or profile and ("  |cffc9d5df"..profile.main..(profile.off ~= "None" and "/"..profile.off or "").."|r") or "  |cff778899role unset|r"
       t:SetText(((who == me() or data and data.online) and "|cff44dd77●|r " or "|cff888888○|r ") ..
         (needsNote and "|cffffcc55" or "|cffffffff") .. ((data and data.name or who):gsub("%-", " ")) .. "|r  |cff9aabb4" .. team.members[who] .. "|r  " ..
         (data and data.class or "") .. dungeonRole)
-    else t:SetText("") end
+    else t:SetText(""); t:SetShown(false) end
   end
   local requests={}
   if team and FT:CanManage(team,me()) and FT.requests[team.id] then
