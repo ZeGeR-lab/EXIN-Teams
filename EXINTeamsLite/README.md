@@ -8,7 +8,7 @@ Lightweight guild team and roster management for Ex Inferno.
 
 1. Download the `EXINTeamsLite-install` artifact from the successful [GitHub Actions build](https://github.com/ZeGeR-lab/EXIN-Teams/actions).
 2. Extract the `EXINTeamsLite` folder from the archive.
-3. Place that folder in your World of Warcraft `_retail_/Interface/AddOns/` directory (or the equivalent AddOns directory used by your game client).
+3. Place that folder in your World of Warcraft `_forever_/Interface/AddOns/` directory. WoW Forever uses its own client folder; do not install this build under `_retail_`, `_classic_`, or `_classic_era_`.
 4. Enable **EXIN Teams Lite** from the AddOns list.
 5. Log in with a guild character and type `/exin`.
 
@@ -24,9 +24,10 @@ Lightweight guild team and roster management for Ex Inferno.
 - Edit or clear the team message; clearing it synchronizes to other clients.
 - Warn team managers that renaming a team does not automatically rewrite guild public notes.
 - Synchronize team metadata, membership, permissions, and deletions between online guild clients.
-- Scope every addon message to the active guild and realm; all guild clients must update to 0.5.30 together because this release uses a new synchronization prefix.
+- Scope every addon message to the active guild and realm; all guild clients must update together when the synchronization protocol changes.
 - Resolve simultaneous same-name team creation deterministically using the lexicographically smallest team ID, with a tombstone for the losing ID.
 - Resolve equal-timestamp ownership transfers deterministically by normalized actor identity; ownership revision and actor are replicated together.
+- Prevent a team owner from advancing guild-wide ownership history through a forged SYNC snapshot; only a Guild-wide Officer may advance that revision.
 
 ## Permissions
 
@@ -39,7 +40,7 @@ Lightweight guild team and roster management for Ex Inferno.
 
 ## Development and testing
 
-The Lua 5.1 syntax check, Core synchronization/permission regression tests, multi-client synchronization tests, and Lite-only packaging run in GitHub Actions. These automated checks do not replace an in-game compatibility and multi-member guild test. The current emblem art is placeholder artwork pending the original image assets.
+The Lua syntax check, Core synchronization/permission regression tests, multi-client synchronization tests, and Lite-only packaging run in GitHub Actions. WoW Forever uses the modern Mainline UI API and Interface 16001; this addon targets that client. Automated checks do not replace an in-game UI and multi-member guild test. The current emblem art is placeholder artwork pending the original image assets.
 
 ## Distribution scope
 
