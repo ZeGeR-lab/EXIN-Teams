@@ -13,7 +13,7 @@ Your Teams lists teams you belong to and teams you lead. Guild-note assignments 
 the remaining guild teams; use the arrow buttons to browse more teams. Every
 guild member can select a team, see its roster names and online status, and
 apply to join. Private roster details require membership or guild officer rank.
-The first of Your Teams opens automatically. The Activity log button on a team
+The first of Your Teams opens automatically. Team rosters scroll vertically and include only guild members ranked Member or higher; the special Free Agents and Needs Onboarding categories remain available for guild roster triage. The Activity log button on a team
 records joins, leaves, member promotions, and team edits seen
 by your addon. It retains 80 entries locally; changes made while your addon is
 offline will not appear retrospectively. Refresh checks for another online
