@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.6 — 2026-11-05
+
+- Add separate end-hour, end-minute, and end-AM/PM selectors to each team's raid schedule editor.
+- Display raid days, start-to-end time, and selected North American time zone in Team Info.
+- Correct expanded schedule decoding and loading, preserve compatibility with schedules saved by 0.6.5, and refresh the saved schedule display.
+
+
 ## 0.6.5 — 2026-11-05
 
 - Add a seven-day toggle schedule editor with hour, minute, AM/PM, and North American time-zone selectors for team raid information.
