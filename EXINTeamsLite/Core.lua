@@ -386,7 +386,16 @@ local function apply(op,f,actor)
       -- Simultaneous Officer creations can arrive in different orders on
       -- different clients. Keep the lexicographically smallest stable ID so
       -- every client converges on the same team regardless of packet order.
-      if id>=duplicateId then return false end
+      if id>=duplicateId then
+        -- This incoming ID loses the deterministic name collision. Persist a
+        -- tombstone even when the smaller ID arrived first on this client, so
+        -- a delayed duplicate NEW cannot recreate the losing team later.
+        LT.deleted=LT.deleted or {}
+        local losingTombstone=LT.deleted[id]
+        LT.deleted[id]={by=actor,at=math.max(time(),tonumber(losingTombstone and losingTombstone.at) or 0)}
+        save()
+        return false
+      end
       LT.deleted=LT.deleted or {}
       local previousTombstone=LT.deleted[duplicateId]
       LT.deleted[duplicateId]={by=actor,at=math.max(time(),tonumber(previousTombstone and previousTombstone.at) or 0)}
@@ -424,7 +433,10 @@ local function apply(op,f,actor)
     -- Metadata and ownership have independent revisions; stale metadata never rolls back newer edits.
     local metadataRevision=tonumber(f[10]) or 0
     local metadataActor=norm(f[11] or actor)
-    if metadataRevision>=0 and metadataRevision<=time()+300 and metadataIsNewer(team,metadataRevision,metadataActor) then
+    -- Revision zero is an unversioned initial snapshot, not authority to
+    -- overwrite an established team's metadata. NEW already carries initial
+    -- metadata, so SYNC metadata must always have a plausible positive revision.
+    if plausibleRevision(metadataRevision) and metadataIsNewer(team,metadataRevision,metadataActor) then
       team.name,team.focus,team.motd,team.color=f[3],f[4],f[5],color(f[6])
       team.emblem=emblemId(f[7] or team.emblem)
       setMetadataRevision(team,metadataRevision,metadataActor)
