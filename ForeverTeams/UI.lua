@@ -209,7 +209,7 @@ local function chosen() return FT.teams[FT.selected] or systemTeams[FT.selected]
 local function me() return FT:SelfName() end
 local function isSystemTeam(team) return team and systemTeams[team.id] == team end
 local teamInfoPanel=CreateFrame("Frame",nil,UIParent,"BackdropTemplate")
-teamInfoPanel:SetSize(460,285)
+teamInfoPanel:SetSize(480,310)
 teamInfoPanel:SetPoint("CENTER")
 teamInfoPanel:SetFrameStrata("FULLSCREEN_DIALOG")
 teamInfoPanel:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",edgeFile="Interface\\DialogFrame\\UI-DialogBox-Border",edgeSize=24,
@@ -217,30 +217,37 @@ teamInfoPanel:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Backgrou
 teamInfoPanel:Hide()
 local teamInfoTitle=line(teamInfoPanel,20,-20,410)
 local teamInfoSchedule=line(teamInfoPanel,22,-58,410,"small")
-teamInfoSchedule:SetHeight(64)
+teamInfoSchedule:SetHeight(82)
 teamInfoSchedule:SetWordWrap(true)
 teamInfoSchedule:SetJustifyV("TOP")
-local teamInfoContact=line(teamInfoPanel,22,-137,410,"small")
+local teamInfoContact=line(teamInfoPanel,22,-155,430,"small")
 teamInfoContact:SetHeight(58)
 teamInfoContact:SetWordWrap(true)
 teamInfoContact:SetJustifyV("TOP")
 local teamInfoEdit
 local function decodeSchedule(value)
-  local days,hour,minute,ampm,zone=(value or ""):match("^([^;]*);(%d+);(%d+);(%a+);([A-Z]+)$")
-  if not days or (ampm~="AM" and ampm~="PM") then return nil end
+  local days,sh,sm,sa,eh,em,ea,zone=(value or ""):match("^([^;]*);(%d+);(%d+);(%a+);(%d+);(%d+);(%a+);([A-Z]+)$")
+  if not days then
+    days,sh,sm,sa,zone=(value or ""):match("^([^;]*);(%d+);(%d+);(%a+);([A-Z]+)$")
+    eh,em,ea=sh,sm,sa
+  end
+  if not days or (sa~="AM" and sa~="PM") or (ea~="AM" and ea~="PM") then return nil end
   local selected={}
   for day in days:gmatch("[^,]+") do selected[day]=true end
-  return {days=selected,hour=tonumber(hour),minute=tonumber(minute),ampm=ampm,zone=zone}
+  return {days=selected,startHour=tonumber(sh),startMinute=tonumber(sm),startAMPM=sa,
+    endHour=tonumber(eh),endMinute=tonumber(em),endAMPM=ea,zone=zone}
 end
 local zoneNames={ET="Eastern",CT="Central",MT="Mountain",PT="Pacific",AKT="Alaska",HT="Hawaii"}
 local dayNames={"Sun","Mon","Tue","Wed","Thu","Fri","Sat"}
 local function formatSchedule(value)
   local data=decodeSchedule(value)
-  if not data then return value and value~="" and value or "Not posted yet." end
+  if not data then return value and value~="" and value or "No raid schedule has been saved yet." end
   local days={}
   for _,day in ipairs(dayNames) do if data.days[day] then table.insert(days,day) end end
   if #days==0 then return "No raid days selected." end
-  return table.concat(days,", ").." • "..data.hour..":"..string.format("%02d",data.minute).." "..data.ampm.." "..(zoneNames[data.zone] or data.zone).." time"
+  local startTime=string.format("%d:%02d %s",data.startHour,data.startMinute,data.startAMPM)
+  local endTime=string.format("%d:%02d %s",data.endHour,data.endMinute,data.endAMPM)
+  return table.concat(days,", ").."\\n"..startTime.." – "..endTime.." "..(zoneNames[data.zone] or data.zone).." time"
 end
 local function drawTeamInfo(team)
   if not team then teamInfoPanel:Hide(); return end
@@ -251,7 +258,7 @@ local function drawTeamInfo(team)
   teamInfoEdit:SetShown(FT:CanEditInfo(team,FT:SelfName()) and true or false)
 end
 local scheduleEditor=CreateFrame("Frame",nil,UIParent,"BackdropTemplate")
-scheduleEditor:SetSize(500,390)
+scheduleEditor:SetSize(520,455)
 scheduleEditor:SetPoint("CENTER")
 scheduleEditor:SetFrameStrata("FULLSCREEN_DIALOG")
 scheduleEditor:SetFrameLevel(teamInfoPanel:GetFrameLevel()+20)
@@ -302,12 +309,16 @@ line(scheduleEditor,24,-112,90,"small"):SetText("|cffffd36aSTART TIME|r")
 local hourDropdown=makeDropdown("EXINTeamsHourDropdown",15,-125,62,hours,{label="7",value="7"})
 local minuteDropdown=makeDropdown("EXINTeamsMinuteDropdown",105,-125,62,minutes,{label="00",value="00"})
 local ampmDropdown=makeDropdown("EXINTeamsAMPMDropdown",195,-125,62,ampm,{label="PM",value="PM"})
+line(scheduleEditor,24,-180,180,"small"):SetText("|cffffd36aEND TIME|r")
+local endHourDropdown=makeDropdown("EXINTeamsEndHourDropdown",15,-193,62,hours,{label="10",value="10"})
+local endMinuteDropdown=makeDropdown("EXINTeamsEndMinuteDropdown",105,-193,62,minutes,{label="00",value="00"})
+local endAmpmDropdown=makeDropdown("EXINTeamsEndAMPMDropdown",195,-193,62,ampm,{label="PM",value="PM"})
 line(scheduleEditor,295,-112,160,"small"):SetText("|cffffd36aTIME ZONE|r")
 local zoneDropdown=makeDropdown("EXINTeamsZoneDropdown",280,-125,145,zones,{label="Eastern",value="ET"})
-line(scheduleEditor,24,-180,430,"small"):SetText("|cffffd36aJOIN / CONTACT|r")
+line(scheduleEditor,24,-250,430,"small"):SetText("|cffffd36aJOIN / CONTACT|r")
 local contactInput=CreateFrame("EditBox",nil,scheduleEditor,"InputBoxTemplate")
 contactInput:SetSize(430,28)
-contactInput:SetPoint("TOPLEFT",scheduleEditor,"TOPLEFT",28,-202)
+contactInput:SetPoint("TOPLEFT",scheduleEditor,"TOPLEFT",28,-272)
 contactInput:SetAutoFocus(false)
 contactInput:SetMaxLetters(70)
 contactInput:SetScript("OnEscapePressed",function(self) self:ClearFocus() end)
@@ -325,19 +336,22 @@ local function loadScheduleEditor(info)
   end
   select(hourDropdown,data and tostring(data.hour) or "7",hours)
   select(minuteDropdown,data and string.format("%02d",data.minute) or "00",minutes)
-  select(ampmDropdown,data and data.ampm or "PM",ampm)
+  select(ampmDropdown,data and data.startAMPM or "PM",ampm)
+  select(endHourDropdown,data and tostring(data.endHour) or "10",hours)
+  select(endMinuteDropdown,data and string.format("%02d",data.endMinute) or "00",minutes)
+  select(endAmpmDropdown,data and data.endAMPM or "PM",ampm)
   select(zoneDropdown,data and data.zone or "ET",zones)
   contactInput:SetText(info.contact or "")
 end
-teamInfoEdit=button(teamInfoPanel,"Edit info",115,-220,90,function()
+teamInfoEdit=button(teamInfoPanel,"Edit info",115,-245,90,function()
   local team=FT.teams[FT.selected] or systemTeams[FT.selected]
   if not team or not FT:CanEditInfo(team,FT:SelfName()) then return end
   loadScheduleEditor(FT.systemInfo and FT.systemInfo[team.id] or {})
   scheduleEditor.teamID=team.id
   scheduleEditor:Show()
 end)
-button(teamInfoPanel,"Close",235,-220,90,function() teamInfoPanel:Hide() end)
-button(scheduleEditor,"Save",145,-330,90,function()
+button(teamInfoPanel,"Close",235,-245,90,function() teamInfoPanel:Hide() end)
+button(scheduleEditor,"Save",145,-390,90,function()
   local teamID=scheduleEditor.teamID
   local team=FT.teams[teamID] or systemTeams[teamID]
   if not team or not FT:CanEditInfo(team,FT:SelfName()) then return end
@@ -348,6 +362,9 @@ button(scheduleEditor,"Save",145,-330,90,function()
     schedule=table.concat(days,",")..";"..tostring(UIDropDownMenu_GetSelectedValue(hourDropdown) or "7")..";"..
       tostring(UIDropDownMenu_GetSelectedValue(minuteDropdown) or "00")..";"..
       tostring(UIDropDownMenu_GetSelectedValue(ampmDropdown) or "PM")..";"..
+      tostring(UIDropDownMenu_GetSelectedValue(endHourDropdown) or "10")..";"..
+      tostring(UIDropDownMenu_GetSelectedValue(endMinuteDropdown) or "00")..";"..
+      tostring(UIDropDownMenu_GetSelectedValue(endAmpmDropdown) or "PM")..";"..
       tostring(UIDropDownMenu_GetSelectedValue(zoneDropdown) or "ET")
   end
   local contact=contactInput:GetText():match("^%s*(.-)%s*$")
@@ -357,7 +374,7 @@ button(scheduleEditor,"Save",145,-330,90,function()
   drawTeamInfo(team)
   teamInfoPanel:Show()
 end)
-button(scheduleEditor,"Cancel",255,-330,90,function() scheduleEditor:Hide() end)
+button(scheduleEditor,"Cancel",255,-390,90,function() scheduleEditor:Hide() end)
 local function canSee(team) return isSystemTeam(team) or FT:CanSeeDetails(team, me()) end
 local function sortedTeams()
   local list = {}
