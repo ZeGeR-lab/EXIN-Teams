@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.9 — 2026-11-05
+
+- Fix the shared action validator incorrectly rejecting ordinary names and text containing the letters `r` or `n`, including full character names such as Snoop Worg.
+
+
 ## 0.6.8 — 2026-11-05
 
 - Fix raid schedule and contact information being rejected by the INFO handler due to an incorrectly escaped validation pattern.
