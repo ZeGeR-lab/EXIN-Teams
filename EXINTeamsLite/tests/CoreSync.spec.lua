@@ -54,9 +54,11 @@ assert(LT.teams.team1.owner=="member-aeriepeak","trusted newer ownership snapsho
 assert(LT.teams.team1.members["member-aeriepeak"]=="leader","new owner must receive Leader role")
 assert(LT.teams.team1.members["oldmember-aeriepeak"]=="officer","previous owner Leader role should be demoted")
 -- A non-Officer team owner may sync team data but cannot forge a future ownership revision.
+LT.authorizedOfficers["member-aeriepeak"].revoked=true
 receive("SYNC|team1|Team Alpha|General||Blue|E01|member-aeriepeak|999999999|0|member-aeriepeak|zzz-aeriepeak","Member-AeriePeak")
 assert(LT.teams.team1.ownerChangedAt==150,"team owner must not advance the ownership revision through SYNC")
 assert(LT.teams.team1.ownerChangedBy=="officer-aeriepeak","team owner must not forge the recorded ownership-change actor")
+LT.authorizedOfficers["member-aeriepeak"].revoked=false
 -- A team manager cannot poison metadata revision ordering with a far-future timestamp.
 receive("NAME|team1|Forged Future Name|999999999","Member-AeriePeak")
 assert(LT.teams.team1.name=="Team Alpha","a forged future metadata revision must be rejected")
