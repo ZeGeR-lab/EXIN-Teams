@@ -1,6 +1,6 @@
 # EXIN Teams Lite
 
-**Current version: 0.5.39**
+**Current version: 0.5.40**
 
 Lightweight guild team and roster management for Ex Inferno.
 
@@ -26,6 +26,7 @@ Lightweight guild team and roster management for Ex Inferno.
 - Synchronize team metadata, membership, permissions, and deletions between online guild clients.
 - Queue addon messages rejected by modern client encounter lockdown or per-prefix throttling, then retry after returning to the world.
 - Persist pending outbound team updates in guild SavedVariables so they can be retried after a logout or addon reload.
+- Keep queued updates attached to their original guild while guildless, restoring them if the character rejoins.
 - Validate saved pending packets and discard queued messages from obsolete synchronization protocols after an upgrade.
 - Deduplicate repeated guild HELLO requests within each client session to prevent redundant full-roster synchronization bursts.
 - Read addon-message result codes from the final API return value for compatibility with deprecated wrappers.
