@@ -49,6 +49,8 @@ LT.teams.team1={
   members={["oldmember-aeriepeak"]="leader",["member-aeriepeak"]="member",["officer-aeriepeak"]="officer"},
   noteMembers={["member-aeriepeak"]=true},manualMembers={["oldmember-aeriepeak"]=true,["officer-aeriepeak"]=true},events={}
 }
+-- Establish the metadata through a versioned operation before testing ownership sync.
+receive("NAME|team1|Team Alpha|1","Officer-AeriePeak")
 receive("SYNC|team1|Team Alpha|General||Blue|E01|member-aeriepeak|150","Officer-AeriePeak")
 assert(LT.teams.team1.owner=="member-aeriepeak","trusted newer ownership snapshot should reconcile")
 assert(LT.teams.team1.members["member-aeriepeak"]=="leader","new owner must receive Leader role")
