@@ -292,4 +292,16 @@ assert(snoop.LT.teams["retry-team"].focus=="Reload Persisted",
 assert(#restarted.saved["Ex Inferno@AeriePeak"].pendingMessages==0,
   "successfully submitted pending messages should be removed from SavedVariables")
 
+-- Pending packets from a previous synchronization protocol must not be replayed.
+restarted.online=false
+restarted.saved["Ex Inferno@AeriePeak"].pendingMessages={
+  {prefix="EXINL1",message="Ex Inferno@AeriePeak|FOCUS|retry-team|Stale Protocol|9999",channel="GUILD"}
+}
+local protocolRestart=newClient("Member-AeriePeak",restarted.saved)
+table.insert(clients,protocolRestart)
+assert(#protocolRestart.saved["Ex Inferno@AeriePeak"].pendingMessages==0,
+  "reopening a guild must discard queued packets from an obsolete protocol prefix")
+assert(snoop.LT.teams["retry-team"].focus=="Reload Persisted",
+  "obsolete queued packets must not be transmitted under the current protocol prefix")
+
 print("MultiClientSync.spec.lua: all two-client synchronization tests passed")
