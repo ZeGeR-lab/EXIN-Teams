@@ -2,7 +2,7 @@ local ADDON, FT = ...
 _G.ForeverTeams = FT
 FT.version = 1
 local addonMetadata=C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
-FT.versionString=(addonMetadata and addonMetadata(ADDON,"Version")) or "0.6.7"
+FT.versionString=(addonMetadata and addonMetadata(ADDON,"Version")) or "0.6.8"
 FT.teams = {}
 FT.roster = {}
 FT.invitations = {}
@@ -523,8 +523,8 @@ local function apply(op, f, actor)
     local system=id=="system-free-agents" or id=="system-needs-onboarding"
     local target=system and {id=id} or FT.teams[id]
     if not target or not FT:CanEditInfo(target,actor) or
-      type(f[3])~="string" or #f[3]>70 or f[3]:find("[|\\r\\n]") or
-      type(f[4])~="string" or #f[4]>70 or f[4]:find("[|\\r\\n]") then return end
+      type(f[3])~="string" or #f[3]>70 or f[3]:find("[|\r\n]") or
+      type(f[4])~="string" or #f[4]>70 or f[4]:find("[|\r\n]") then return end
     FT.systemInfo=FT.systemInfo or {}
     local previous=FT.systemInfo[id] or {}
     FT.systemInfo[id]={schedule=f[3],contact=f[4],motd=previous.motd,focus=previous.focus,color=previous.color,updated=time(),by=actor}
