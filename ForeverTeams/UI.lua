@@ -226,8 +226,8 @@ teamInfoContact:SetWordWrap(true)
 teamInfoContact:SetJustifyV("TOP")
 local teamInfoEdit
 local function decodeSchedule(value)
-  local days,hour,minute,ampm,zone=(value or ""):match("^([^;]*);(%d+);(%d+);(AM|PM);([A-Z]+)$")
-  if not days then return nil end
+  local days,hour,minute,ampm,zone=(value or ""):match("^([^;]*);(%d+);(%d+);(%a+);([A-Z]+)$")
+  if not days or (ampm~="AM" and ampm~="PM") then return nil end
   local selected={}
   for day in days:gmatch("[^,]+") do selected[day]=true end
   return {days=selected,hour=tonumber(hour),minute=tonumber(minute),ampm=ampm,zone=zone}
