@@ -213,7 +213,7 @@ local function scheduleOutgoing(delay)
         if C_ChatInfo and C_ChatInfo.SendAddonMessage then
           result=select(-1,C_ChatInfo.SendAddonMessage(LT.PREFIX,packet.message,packet.channel,packet.target))
         elseif SendAddonMessage then
-          SendAddonMessage(LT.PREFIX,packet.message,packet.channel,packet.target)
+          result=select(-1,SendAddonMessage(LT.PREFIX,packet.message,packet.channel,packet.target))
         else
           return
         end
