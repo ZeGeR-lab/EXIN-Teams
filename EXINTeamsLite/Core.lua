@@ -68,6 +68,7 @@ local function guildStorageKey(name)
 end
 local activeGuildKey
 local helloAt={}
+local persistPending
 local function clearGuildRuntime()
   persistPending()
   LT.teams={}
@@ -199,7 +200,7 @@ function LT:CanDelete(team, who) return team and self:IsGuildOfficer(who) end
 local outgoingQueue={}
 local outgoingTimer=false
 local outgoingLocked=false
-local function persistPending()
+persistPending=function()
   if LT.db then LT.db.pendingMessages=outgoingQueue end
 end
 local function lastReturn(...)
